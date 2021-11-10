@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 
 	ROS_INFO("Hello world!");
 
-	ros::Publisher  traj_pub= nh.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/firefly1/desired_trajectory", 1);
+	ros::Publisher  traj_pub= nh.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/payload/desired_trajectory", 1);
 
 	double dt = 50.0;
 	ros::Rate loop_rate(dt);
@@ -58,7 +58,7 @@ int main(int argc, char **argv)
 	std::vector<trajectory_profile> data;
 	double sample = 0.003;
 
-	p1.pos << 1.2, 0, 1.3;
+	p1.pos << 0.5, 0, 1.3;
 	p1.vel<< 0, 0, 0;
 	p1.acc<< 0, 0, 0;
 	p1.yaw = 0;
@@ -98,7 +98,7 @@ int main(int argc, char **argv)
 	p8.acc << 0, 0, 0;
 	p8.yaw = 0;
 
-	p9.pos << 0, 0, 1.3;
+	p9.pos << 0.5, 0, 1.3;
 	p9.vel << 0, 0, 0;
 	p9.acc << 0, 0, 0;
 	p9.yaw = 0;
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
 	path.push_back(segments(p7, p8, 3));
 	data = plan.get_profile(path, path.size(), sample);
 
-	desired_pose.pose.position.x = 1.2;
+	desired_pose.pose.position.x = 0.5;
 	desired_pose.pose.position.y = 0.0;
 	desired_pose.pose.position.z = 1.3;
 

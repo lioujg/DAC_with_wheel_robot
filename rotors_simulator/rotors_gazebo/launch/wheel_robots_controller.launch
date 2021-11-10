@@ -1,7 +1,9 @@
 <!--  for trajectory tracking -->
 <launch>
 
-    <arg name="robot_name" default="TH" />
+    <node name="geo" pkg="offb" type="geo" output="screen"/>
+
+    <arg name="robot_name" default="Robot" />
 
     <group ns="$(arg robot_name)1">
         <param name = "robot_number" type = "string" value = "1" />
