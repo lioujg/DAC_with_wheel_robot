@@ -93,7 +93,7 @@ int main(int argc, char **argv)
 	p7.acc << 0, 0, 0;
 	p7.yaw = 0;
 
-	p8.pos << 0, 0, 1.3;
+	p8.pos << 0.5, 0, 1.3;
 	p8.vel << 0, 0, 0;
 	p8.acc << 0, 0, 0;
 	p8.yaw = 0;

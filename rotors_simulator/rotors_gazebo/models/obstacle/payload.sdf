@@ -143,7 +143,6 @@
         </visual>
 
         <sensor name="IMU" type="imu">
-
           <plugin name="IMU_plugin" filename="libgazebo_ros_imu_sensor.so">
             <always_on>true</always_on>
               <topicName>/IMU</topicName>
@@ -159,5 +158,19 @@
       <pose>-0.00 0.0 0.0 0 0.0 0.0</pose>
     </joint>
 
+
+    <plugin name="p3d_base_controller" filename="libgazebo_ros_p3d.so">
+      <alwaysOn>true</alwaysOn>
+      <updateRate>50.0</updateRate>
+      <bodyName>payload_IMU</bodyName>
+      <topicName>payload_position</topicName>
+      <gaussianNoise>0.01</gaussianNoise>
+      <frameName>world</frameName>
+      <xyzOffsets>0 0 0</xyzOffsets>
+      <rpyOffsets>0 0 0</rpyOffsets>
+    </plugin>
+
   </model>
 </sdf>
+
+
