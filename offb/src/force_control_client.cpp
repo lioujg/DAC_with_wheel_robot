@@ -39,6 +39,14 @@ int main(int argc, char **argv)
   bool call_service;
   ros::Rate loop_rate(20);
 
+  bool service_ready = false;
+  while (!service_ready) {
+          service_ready = ros::service::exists("/gazebo/apply_body_wrench", true);
+          ROS_INFO("waiting for apply_body_wrench service");
+          ros::Duration(0.5).sleep();
+  }
+  ROS_INFO("apply_body_wrench service is ready");
+
   while(ros::ok()){
     apply_wrench_req.wrench.force.x = robot_cmd.force.x;
     apply_wrench_req.wrench.force.y = robot_cmd.force.y;

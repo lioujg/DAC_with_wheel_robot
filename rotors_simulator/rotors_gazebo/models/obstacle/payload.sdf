@@ -163,7 +163,7 @@
       <alwaysOn>true</alwaysOn>
       <updateRate>50.0</updateRate>
       <bodyName>payload_IMU</bodyName>
-      <topicName>payload_position</topicName>
+      <topicName>position</topicName>
       <gaussianNoise>0.01</gaussianNoise>
       <frameName>world</frameName>
       <xyzOffsets>0 0 0</xyzOffsets>
