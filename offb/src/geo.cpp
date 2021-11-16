@@ -103,13 +103,20 @@ int main(int argc, char **argv)
 	p9.acc << 0, 0, 0;
 	p9.yaw = 0;
 
-	path.push_back(segments(p1, p2, 3));
-	path.push_back(segments(p2, p3, 2));
-	path.push_back(segments(p3, p4, 2));
-	path.push_back(segments(p4, p5, 2));
-	path.push_back(segments(p5, p6, 2));
-	path.push_back(segments(p6, p7, 2));
-	path.push_back(segments(p7, p8, 3));
+	// path.push_back(segments(p1, p2, 3));
+	// path.push_back(segments(p2, p3, 2));
+	// path.push_back(segments(p3, p4, 2));
+	// path.push_back(segments(p4, p5, 2));
+	// path.push_back(segments(p5, p6, 2));
+	// path.push_back(segments(p6, p7, 2));
+	// path.push_back(segments(p7, p8, 3));
+	path.push_back(segments(p1, p2, 6));
+	path.push_back(segments(p2, p3, 4));
+	path.push_back(segments(p3, p4, 4));
+	path.push_back(segments(p4, p5, 4));
+	path.push_back(segments(p5, p6, 4));
+	path.push_back(segments(p6, p7, 4));
+	path.push_back(segments(p7, p8, 6));
 	data = plan.get_profile(path, path.size(), sample);
 
 	desired_pose.pose.position.x = 0.5;
@@ -169,7 +176,7 @@ int main(int argc, char **argv)
 			vir_x = 0;
 			vir_y = 0;
 			vir_z = desired_pose.pose.position.z;// + 0.3*sin(1.4*M_PI*t/T);
-
+#else
 			vx = 0;
 			vy = 0;
 			vz = 0;//0.3*cos(1.4*M_PI*t/T)*1.4*M_PI*t/T;

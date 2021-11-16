@@ -80,7 +80,7 @@ void initialized_params(){
          0, 1, 0,
          0, 0, 1;
   lambda = 1.5;
-  double gamma_gain = 0.1;
+  double gamma_gain = 0.01;
   gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
   double K_d_gain = 0.1;
   K_d = Eigen::Matrix<double, 6, 6>::Identity() * K_d_gain;
@@ -227,7 +227,7 @@ int main(int argc, char **argv)
     robot_cmd.torque.z = wrench(5);
 
     std::cout << wrench << std::endl << std::endl;
-    std::cout << dt << std::endl;
+    // std::cout << dt << std::endl;
 
     // robot_cmd.force.z = 1.1 * 0.5 / 2 * 9.81;
     past = now;
