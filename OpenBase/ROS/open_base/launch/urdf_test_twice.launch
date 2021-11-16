@@ -1,0 +1,21 @@
+<launch>
+
+  <arg name="robot_name" default="robot" />
+  <group ns="$(arg robot_name)1">
+    <include file="$(find open_base)/launch/Omni.launch">
+      <arg name="namespace" value="$(arg robot_name)1" />
+      <arg name="x" value="1.7"/>
+      <arg name="y" value="0.0"/>
+    </include>
+  </group>
+
+  <group ns="$(arg robot_name)2">
+    <include file="$(find open_base)/launch/Omni.launch">
+      <arg name="namespace" value="$(arg robot_name)2" />
+      <arg name="x" value="-0.7"/>
+      <arg name="y" value="0.0"/>
+    </include>
+  </group>
+
+
+</launch>

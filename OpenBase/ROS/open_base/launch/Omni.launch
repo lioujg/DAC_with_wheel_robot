@@ -1,0 +1,27 @@
+<launch>
+
+  <!-- these are the arguments you can pass this launch file, for example paused:=true -->
+  <arg name="paused" default="true"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="gui" default="true"/>
+  <arg name="headless" default="false"/>
+  <arg name="debug" default="false"/>
+  <arg name="model" default="$(find open_base)/xacro/main.urdf.xacro"/>
+  <arg name="x" default="1.3"/>
+  <arg name="y" default="0.75"/>
+  <arg name="robot_name" default="robot_1"/>
+  <arg name="namespace" default="$(arg robot_name)"/>
+
+
+  <param name="robot_description" command="$(find xacro)/xacro '$(arg model)'
+    namespace:=$(arg namespace)" />
+
+  <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model"
+        args="-x $(arg x) -y $(arg y) -urdf -model $(arg namespace) -param robot_description" respawn="false" output="screen"/>
+
+  <node pkg="robot_state_publisher" type="robot_state_publisher"  name="robot_state_publisher">
+    <param name="publish_frequency" type="double" value="30.0" />
+  </node>
+
+
+</launch>

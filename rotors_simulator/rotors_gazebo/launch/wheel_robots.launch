@@ -12,9 +12,26 @@
         <arg name="world_name" value="$(find rotors_gazebo)/worlds/drone_inv.world"/>
         <!--<arg name="world_name" value="$(find rotors_gazebo)/worlds/obstacle_world.world"/>-->
         <!-- <arg name="debug" value="true"/> -->
-        <arg name="paused" value="false"/>
+        <arg name="paused" value="true"/>
         <!-- <arg name="gui" value="false"/> -->
     </include>
+
+    <arg name="robot_name" default="robot" />
+    <group ns="$(arg robot_name)1">
+        <include file="$(find open_base)/launch/Omni.launch">
+            <arg name="namespace" value="$(arg robot_name)1" />
+            <arg name="x" value="1.7"/>
+            <arg name="y" value="0.0"/>
+        </include>
+    </group>
+
+    <group ns="$(arg robot_name)2">
+        <include file="$(find open_base)/launch/Omni.launch">
+            <arg name="namespace" value="$(arg robot_name)2" />
+            <arg name="x" value="-0.7"/>
+            <arg name="y" value="0.0"/>
+        </include>
+    </group>
 
     <arg name = "sdf" default = "$(find rotors_gazebo)/models/obstacle/payload.sdf"/>
     <group ns = "payload">
@@ -23,7 +40,7 @@
         -model payload
         -x 0.5
         -y 0
-        -z 0.125
+        -z 0.35
         -R 0
         -P 0
         -Y 0"/>

@@ -47,20 +47,20 @@ link_name_2: 'link'"
 
     # attach_srv.call(req)
 
-    rospy.loginfo("Attaching UAV1 and payload")
+    rospy.loginfo("Attaching Robot 1 and payload")
     req = AttachRequest()
-    req.model_name_1 = "iris1"
-    req.link_name_1 = "iris1/base_link"
+    req.model_name_1 = "robot1"
+    req.link_name_1 = "origin_link"
     req.model_name_2 = "payload"
-    req.link_name_2 = "obstacle"
+    req.link_name_2 = "robot_link_1"
 
     attach_srv.call(req)
 
-    rospy.loginfo("Attaching UAV2 and payload")
+    rospy.loginfo("Attaching Robot 2 and payload")
     req = AttachRequest()
-    req.model_name_1 = "iris2"
-    req.link_name_1 = "iris2/base_link"
+    req.model_name_1 = "robot2"
+    req.link_name_1 = "origin_link"
     req.model_name_2 = "payload"
-    req.link_name_2 = "obstacle"
+    req.link_name_2 = "robot_link_2"
 
     attach_srv.call(req)
