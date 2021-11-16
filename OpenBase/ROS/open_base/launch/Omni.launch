@@ -17,7 +17,7 @@
     namespace:=$(arg namespace)" />
 
   <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model"
-        args="-x $(arg x) -y $(arg y) -urdf -model $(arg namespace) -param robot_description" respawn="false" output="screen"/>
+        args="-unpause -x $(arg x) -y $(arg y) -urdf -model $(arg namespace) -param robot_description" respawn="false" output="screen"/>
 
   <node pkg="robot_state_publisher" type="robot_state_publisher"  name="robot_state_publisher">
     <param name="publish_frequency" type="double" value="30.0" />
