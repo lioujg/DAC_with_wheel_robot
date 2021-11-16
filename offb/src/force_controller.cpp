@@ -91,13 +91,13 @@ Eigen::Vector3d vee_map(Eigen::Matrix3d Matrix){
 Eigen::Matrix3d hat_map(Eigen::Vector3d Vector){
   Eigen::Matrix3d hat;
   hat(0, 0) = 0;
-  hat(0, 1) = -Vector(3);
-  hat(0, 2) = Vector(2);
-  hat(1, 0) = Vector(3);
+  hat(0, 1) = -Vector(2);
+  hat(0, 2) = Vector(1);
+  hat(1, 0) = Vector(2);
   hat(1, 1) = 0;
-  hat(1, 2) = -Vector(1);
-  hat(2, 0) = -Vector(2);
-  hat(2, 1) = Vector(1);
+  hat(1, 2) = -Vector(0);
+  hat(2, 0) = -Vector(1);
+  hat(2, 1) = Vector(0);
   hat(2, 2) = 0;
   return hat;
 }
@@ -121,7 +121,7 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(20);
 
   while(ros::ok()){
-    initialized_params();/*
+    initialized_params();
 
     // compute error signals
     Eigen::Matrix3d Re = R_d.transpose() * R;
@@ -145,6 +145,7 @@ int main(int argc, char **argv)
     s.block<3, 1>(0, 0) = sigma;
     s.block<3, 1>(3, 0) = s_l;
 
+
     // compute Y_o
     // q_r dot is the combination of v_r and w_r
     // q_r double dot is the combination of a_r and alpha_r
@@ -154,9 +155,10 @@ int main(int argc, char **argv)
                                                                     lambda * R_d * vee_map(Pa(hat_map(R_d.transpose() * we)));
     Eigen::Vector3d w_r = payload_reference_angular_velocity - lambda * R_d * Pa_Re_V;
     Eigen::Vector3d v_r = payload_reference_linear_velocity - lambda * position_error;
+
     Eigen::Matrix<double, 3, 10> Y_l;
     Eigen::Matrix<double, 3, 10> Y_r;
-    Eigen::Matrix<double, 6, 10> Y_o;*/
+    Eigen::Matrix<double, 6, 10> Y_o;
 
 
     geometry_msgs::Wrench robot_cmd;
