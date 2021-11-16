@@ -108,6 +108,20 @@ Eigen::Matrix3d Pa(Eigen::Matrix3d Matrix){
   return Matrix;
 }
 
+Eigen::Matrix<double, 3, 6> regressor_helper_function(Eigen::Vector3d Vector){
+  Eigen::Matrix<double, 3, 6> rhf = Eigen::MatrixXd::Zero(3, 6);
+  rhf(0, 0) = Vector(0);
+  rhf(1, 1) = Vector(0);
+  rhf(2, 2) = Vector(0);
+  rhf(0, 1) = Vector(1);
+  rhf(1, 3) = Vector(1);
+  rhf(2, 4) = Vector(1);
+  rhf(0, 2) = Vector(2);
+  rhf(1, 2) = Vector(2);
+  rhf(2, 5) = Vector(2);
+
+}
+
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "force_controller");
@@ -159,6 +173,19 @@ int main(int argc, char **argv)
     Eigen::Matrix<double, 3, 10> Y_l;
     Eigen::Matrix<double, 3, 10> Y_r;
     Eigen::Matrix<double, 6, 10> Y_o;
+
+    Y_l.block<3, 1>(0, 0) = a_r;
+    Y_l.block<3, 3>(0, 1) = -hat_map(al_r) * R - hat_map(payload_angular_velocity) * hat_map(w_r) * R;
+    Y_l.block<3, 6>(0, 4) = Eigen::MatrixXd::Zero(3, 6);
+
+    Y_r.block<3, 1>(0, 0) = Eigen::MatrixXd::Zero(3, 1);
+    Y_r.block<3, 3>(0, 1) = hat_map(a_r) * R + hat_map(payload_angular_velocity) * hat_map(v_r) * R -
+                                               hat_map(w_r) * hat_map(payload_linear_velocity) * R;
+    Y_r.block<3, 6>(0, 4) = R * regressor_helper_function(R.transpose() * al_r) +
+                            hat_map(payload_angular_velocity) * R * regressor_helper_function(R.transpose() * w_r);
+
+    Y_o.block<3, 10>(0, 0) = Y_l;
+    Y_o.block<3, 10>(3, 0) = Y_r;
 
 
     geometry_msgs::Wrench robot_cmd;
