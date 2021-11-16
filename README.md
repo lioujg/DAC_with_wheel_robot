@@ -18,6 +18,10 @@ sudo apt-get install ros-melodic-control-toolbox
 ```
 roslaunch rotors_gazebo wheel_robots.launch
 ```
+* Combine two robot with payload
+```
+rosrun gazebo_ros_link_attacher attach.py
+```
 * Enable the controller
 ```
 roslaunch rotors_gazebo wheel_robots_controller.launch

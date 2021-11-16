@@ -1,7 +1,9 @@
 <!--  for trajectory tracking -->
 <launch>
 
-    <node name="geo" pkg="offb" type="geo" output="screen"/>
+    <!--<node name="attach" pkg="gazebo_ros_link_attacher" type="attach.py" output="screen"/>-->
+
+    <!--<node name="geo" pkg="offb" type="geo" output="screen"/>-->
 
     <arg name="robot_name" default="Robot" />
 

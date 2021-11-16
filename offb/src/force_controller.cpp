@@ -121,7 +121,7 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(20);
 
   while(ros::ok()){
-    initialized_params();
+    initialized_params();/*
 
     // compute error signals
     Eigen::Matrix3d Re = R_d.transpose() * R;
@@ -156,11 +156,12 @@ int main(int argc, char **argv)
     Eigen::Vector3d v_r = payload_reference_linear_velocity - lambda * position_error;
     Eigen::Matrix<double, 3, 10> Y_l;
     Eigen::Matrix<double, 3, 10> Y_r;
-    Eigen::Matrix<double, 6, 10> Y_o;
+    Eigen::Matrix<double, 6, 10> Y_o;*/
 
 
     geometry_msgs::Wrench robot_cmd;
     robot_cmd.force.z = 0.5 / 2 * 9.81;
+    robot_cmd.force.x = 0.1;
     // robot_cmd.torque.z = 3;
 
   	robot_controller_pub.publish(robot_cmd);
