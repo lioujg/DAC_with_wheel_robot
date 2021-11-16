@@ -123,7 +123,7 @@
             <iyz>0</iyz>
             <izz>0.000185</izz>
           </inertia>
-          <mass>0.0001</mass>
+          <mass>0.01</mass>
         </inertial>
 
         <collision name="robot_1_collision">
@@ -160,7 +160,7 @@
             <iyz>0</iyz>
             <izz>0.000185</izz>
           </inertia>
-          <mass>0.0001</mass>
+          <mass>0.01</mass>
         </inertial>
 
         <collision name="robot_2_collision">

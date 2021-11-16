@@ -46,6 +46,6 @@
         -Y 0"/>
     </group>
 
-    <!--<node name="attach" pkg="gazebo_ros_link_attacher" type="attach.py" output="screen"/>-->
+    <node name="attach" pkg="gazebo_ros_link_attacher" type="attach.py" output="screen"/>
 
 </launch>

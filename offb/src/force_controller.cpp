@@ -19,10 +19,12 @@ Eigen::Vector3d payload_position;
 Eigen::Vector3d payload_reference_position;
 Eigen::Vector3d payload_reference_linear_acceleration;
 Eigen::Vector3d payload_reference_angular_acceleration;
+Eigen::Vector3d r_i;
 
-
+// gain
 double lambda;
-
+Eigen::Matrix<double, 10, 10> gamma_o;
+Eigen::Matrix<double, 6, 6> K_d;
 
 void payload_orientation_cb(const sensor_msgs::Imu::ConstPtr &msg){
   sensor_msgs::Imu payload_imu;
@@ -77,7 +79,11 @@ void initialized_params(){
   R_d << 1, 0, 0,
          0, 1, 0,
          0, 0, 1;
-  double lambda = 1.5;
+  lambda = 1.5;
+  double gamma_gain = 0.1;
+  gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
+  double K_d_gain = 0.1;
+  K_d = Eigen::Matrix<double, 6, 6>::Identity() * K_d_gain;
 }
 
 Eigen::Vector3d vee_map(Eigen::Matrix3d Matrix){
@@ -126,6 +132,11 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "force_controller");
   ros::NodeHandle nh;
+  if(nh.getParam("r_i_x", r_i(0)) && nh.getParam("r_i_y", r_i(1)) && nh.getParam("r_i_z", r_i(2))){
+    ROS_INFO("Received r_i info.");
+  }else{
+    ROS_WARN("Can't get r_i!");
+  }
 
   ros::Subscriber payload_imu_sub = nh.subscribe<sensor_msgs::Imu>("/payload/IMU",4,payload_orientation_cb);
   ros::Subscriber reference_input_sub = nh.subscribe<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/payload/desired_trajectory",4,reference_cb);
@@ -136,6 +147,9 @@ int main(int argc, char **argv)
 
   while(ros::ok()){
     initialized_params();
+    static double past;
+    double now = ros::Time::now().toSec();
+    double dt = now - past;
 
     // compute error signals
     Eigen::Matrix3d Re = R_d.transpose() * R;
@@ -188,10 +202,35 @@ int main(int argc, char **argv)
     Y_o.block<3, 10>(3, 0) = Y_r;
 
 
+    // compute o_i hat
+    static Eigen::Matrix<double, 10, 1> o_i_hat = Eigen::MatrixXd::Zero(10, 1);
+    Eigen::Matrix<double, 10, 1> o_i_hat_dot = -gamma_o * Y_o.transpose() * s;
+
+    // implement control law
+    Eigen::Matrix<double, 6, 1> F_i = Y_o * o_i_hat - K_d * s;
+
+    // transfer to wrench
+    Eigen::Matrix<double, 6, 6> M_i_inverse = Eigen::Matrix<double, 6, 6>::Identity();
+    M_i_inverse.bottomLeftCorner(3, 3) = -hat_map(R * r_i);
+    Eigen::Matrix<double, 6, 1> wrench = M_i_inverse * F_i;
+
+    // implement the adaptation law
+    o_i_hat = o_i_hat + o_i_hat_dot * dt;
+
+
     geometry_msgs::Wrench robot_cmd;
+    robot_cmd.force.x = wrench(0);
+    robot_cmd.force.y = wrench(1);
     robot_cmd.force.z = 0.5 / 2 * 9.81;
-    robot_cmd.force.x = 0.1;
-    // robot_cmd.torque.z = 3;
+    robot_cmd.torque.x = wrench(3);
+    robot_cmd.torque.y = wrench(4);
+    robot_cmd.torque.z = wrench(5);
+
+    std::cout << wrench << std::endl << std::endl;
+    std::cout << dt << std::endl;
+
+    // robot_cmd.force.z = 1.1 * 0.5 / 2 * 9.81;
+    past = now;
 
   	robot_controller_pub.publish(robot_cmd);
     loop_rate.sleep();

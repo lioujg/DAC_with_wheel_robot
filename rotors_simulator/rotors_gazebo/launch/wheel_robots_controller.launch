@@ -3,7 +3,7 @@
 
     <!--<node name="attach" pkg="gazebo_ros_link_attacher" type="attach.py" output="screen"/>-->
 
-    <!--<node name="geo" pkg="offb" type="geo" output="screen"/>-->
+    <node name="geo" pkg="offb" type="geo" output="screen"/>
 
     <arg name="robot_name" default="Robot" />
 
@@ -12,6 +12,9 @@
         <node name="force_control_client" pkg="offb" type="force_control_client" output="screen">
             <remap from="robot_wrench" to="robot_1_wrench" />
         </node>
+        <param name = "r_i_x" type = "double" value = "1.05" />
+        <param name = "r_i_y" type = "double" value = "0" />
+        <param name = "r_i_z" type = "double" value = "0" />
         <node name="force_controller" pkg="offb" type="force_controller" output="screen">
             <remap from="robot_wrench" to="robot_1_wrench" />
         </node>
@@ -25,6 +28,9 @@
         <node name="force_control_client" pkg="offb" type="force_control_client" output="screen">
             <remap from="robot_wrench" to="robot_2_wrench" />
         </node>
+        <param name = "r_i_x" type = "double" value = "-1.05" />
+        <param name = "r_i_y" type = "double" value = "0" />
+        <param name = "r_i_z" type = "double" value = "0" />
         <node name="force_controller" pkg="offb" type="force_controller" output="screen">
             <remap from="robot_wrench" to="robot_2_wrench" />
         </node>
