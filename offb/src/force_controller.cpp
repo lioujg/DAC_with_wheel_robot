@@ -82,7 +82,7 @@ void initialized_params(){
   lambda = 1.5;
   double gamma_gain = 0.01;
   gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
-  double K_d_gain = 0.1;
+  double K_d_gain = 30;
   K_d = Eigen::Matrix<double, 6, 6>::Identity() * K_d_gain;
 }
 
@@ -109,9 +109,9 @@ Eigen::Matrix3d hat_map(Eigen::Vector3d Vector){
 }
 
 Eigen::Matrix3d Pa(Eigen::Matrix3d Matrix){
-  Eigen::Matrix3d Matrix_copy = Matrix;
-  Matrix = 1/2 * (Matrix_copy - Matrix_copy.transpose());
-  return Matrix;
+  Eigen::Matrix3d Matrix_rt;
+  Matrix_rt = 1/2 * (Matrix - Matrix.transpose());
+  return Matrix_rt;
 }
 
 Eigen::Matrix<double, 3, 6> regressor_helper_function(Eigen::Vector3d Vector){
@@ -123,7 +123,7 @@ Eigen::Matrix<double, 3, 6> regressor_helper_function(Eigen::Vector3d Vector){
   rhf(1, 3) = Vector(1);
   rhf(2, 4) = Vector(1);
   rhf(0, 2) = Vector(2);
-  rhf(1, 2) = Vector(2);
+  rhf(1, 4) = Vector(2);
   rhf(2, 5) = Vector(2);
 
 }
@@ -140,7 +140,7 @@ int main(int argc, char **argv)
 
   ros::Subscriber payload_imu_sub = nh.subscribe<sensor_msgs::Imu>("/payload/IMU",4,payload_orientation_cb);
   ros::Subscriber reference_input_sub = nh.subscribe<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/payload/desired_trajectory",4,reference_cb);
-  ros::Subscriber payload_odom_sub = nh.subscribe<nav_msgs::Odometry>("/payload/payload_position",4,payload_odom_cb);
+  ros::Subscriber payload_odom_sub = nh.subscribe<nav_msgs::Odometry>("/payload/position",4,payload_odom_cb);
 
   ros::Publisher robot_controller_pub = nh.advertise<geometry_msgs::Wrench>("robot_wrench",4);
   ros::Rate loop_rate(20);
@@ -170,8 +170,8 @@ int main(int argc, char **argv)
     s_l = velocity_error + lambda * position_error;
 
     Eigen::Matrix<double, 6, 1> s;
-    s.block<3, 1>(0, 0) = sigma;
-    s.block<3, 1>(3, 0) = s_l;
+    s.block<3, 1>(0, 0) = s_l;
+    s.block<3, 1>(3, 0) = sigma;
 
 
     // compute Y_o
@@ -180,7 +180,7 @@ int main(int argc, char **argv)
     Eigen::Vector3d a_r = payload_reference_angular_acceleration - lambda * velocity_error;
     // not sure term
     Eigen::Vector3d al_r = payload_reference_angular_acceleration - lambda * hat_map(payload_reference_angular_velocity) * R_d * Pa_Re_V -
-                                                                    lambda * R_d * vee_map(Pa(hat_map(R_d.transpose() * we)));
+                                                                    lambda * R_d * vee_map(Pa(hat_map(R_d.transpose() * we) * Re));
     Eigen::Vector3d w_r = payload_reference_angular_velocity - lambda * R_d * Pa_Re_V;
     Eigen::Vector3d v_r = payload_reference_linear_velocity - lambda * position_error;
 
@@ -207,7 +207,7 @@ int main(int argc, char **argv)
     Eigen::Matrix<double, 10, 1> o_i_hat_dot = -gamma_o * Y_o.transpose() * s;
 
     // implement control law
-    Eigen::Matrix<double, 6, 1> F_i = Y_o * o_i_hat - K_d * s;
+    Eigen::Matrix<double, 6, 1> F_i = /*Y_o * o_i_hat*/ - K_d * s;
 
     // transfer to wrench
     Eigen::Matrix<double, 6, 6> M_i_inverse = Eigen::Matrix<double, 6, 6>::Identity();
@@ -221,12 +221,14 @@ int main(int argc, char **argv)
     geometry_msgs::Wrench robot_cmd;
     robot_cmd.force.x = wrench(0);
     robot_cmd.force.y = wrench(1);
-    robot_cmd.force.z = 0.5 / 2 * 9.81;
+    robot_cmd.force.z = 1.05 * 5 / 2 * 9.81;
     robot_cmd.torque.x = wrench(3);
     robot_cmd.torque.y = wrench(4);
     robot_cmd.torque.z = wrench(5);
 
-    std::cout << wrench << std::endl << std::endl;
+    std::cout << we << std::endl;
+    std::cout << velocity_error << std::endl;
+    std::cout << position_error << std::endl << std::endl;
     // std::cout << dt << std::endl;
 
     // robot_cmd.force.z = 1.1 * 0.5 / 2 * 9.81;

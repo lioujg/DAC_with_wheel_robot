@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 
 	ros::Publisher  traj_pub= nh.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/payload/desired_trajectory", 1);
 
-	double dt = 50.0;
+	double dt = 20.0;
 	ros::Rate loop_rate(dt);
 	nh.setParam("/start",false);
 	trajectory_msgs::MultiDOFJointTrajectoryPoint traj;
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
 	path_def path;
 	trajectory_profile p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11;
 	std::vector<trajectory_profile> data;
-	double sample = 0.003;
+	double sample = 0.05;
 
 	p1.pos << 0.5, 0, 0.46;
 	p1.vel<< 0, 0, 0;
@@ -157,6 +157,14 @@ int main(int argc, char **argv)
 			vir_x = desired_pose.pose.position.x;
 			vir_y = desired_pose.pose.position.y;
 			vir_z = desired_pose.pose.position.z;
+
+			vx = 0;
+			vy = 0;
+			vz = 0;
+
+			ax = 0;
+			ay = 0;
+			az = 0;
 		} else {
 
 			vir_x = data[tick].pos(0);
@@ -176,7 +184,7 @@ int main(int argc, char **argv)
 			vir_x = 0;
 			vir_y = 0;
 			vir_z = desired_pose.pose.position.z;// + 0.3*sin(1.4*M_PI*t/T);
-#else
+
 			vx = 0;
 			vy = 0;
 			vz = 0;//0.3*cos(1.4*M_PI*t/T)*1.4*M_PI*t/T;

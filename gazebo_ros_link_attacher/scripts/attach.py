@@ -47,7 +47,7 @@ link_name_2: 'link'"
 
     # attach_srv.call(req)
 
-    rospy.sleep(0.5)
+    rospy.sleep(0.1)
 
     rospy.loginfo("Attaching Robot 1 and payload")
     req = AttachRequest()
