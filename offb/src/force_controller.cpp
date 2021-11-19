@@ -30,17 +30,20 @@ void payload_orientation_cb(const sensor_msgs::Imu::ConstPtr &msg){
   sensor_msgs::Imu payload_imu;
   payload_imu = *msg;
   Eigen::Quaterniond q;
-  q.x() = payload_imu.orientation.x;
-  q.y() = payload_imu.orientation.y;
-  q.z() = payload_imu.orientation.z;
-  q.w() = payload_imu.orientation.w;
 
-  R = q.normalized().toRotationMatrix();
-  // std::cout << "R=" << std::endl << R << std::endl;
+  if(isnan(payload_imu.angular_velocity.x) == 0){
+    q.x() = payload_imu.orientation.x;
+    q.y() = payload_imu.orientation.y;
+    q.z() = payload_imu.orientation.z;
+    q.w() = payload_imu.orientation.w;
 
-  payload_angular_velocity(0) = payload_imu.angular_velocity.x;
-  payload_angular_velocity(1) = payload_imu.angular_velocity.y;
-  payload_angular_velocity(2) = payload_imu.angular_velocity.z;
+    R = q.normalized().toRotationMatrix();
+    payload_angular_velocity(0) = payload_imu.angular_velocity.x;
+    payload_angular_velocity(1) = payload_imu.angular_velocity.y;
+    payload_angular_velocity(2) = payload_imu.angular_velocity.z;
+  }else if(isnan(payload_imu.angular_velocity.x) != 0){
+    std::cout << "I meet something cool like nan Imu!!" << std::endl;
+  }
 }
 
 void reference_cb(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr &msg){
@@ -66,12 +69,16 @@ void reference_cb(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr 
 void payload_odom_cb(const nav_msgs::Odometry::ConstPtr &msg){
   nav_msgs::Odometry payload_odom;
   payload_odom = *msg;
+  if(isnan(payload_odom.twist.twist.linear.x) != 0){
+    std::cout << "I meet something cool like nan odom!!" << std::endl;
+  }else{
+    payload_linear_velocity(0) = payload_odom.twist.twist.linear.x;
+    payload_linear_velocity(1) = payload_odom.twist.twist.linear.y;
+    payload_linear_velocity(2) = payload_odom.twist.twist.linear.z;
+  }
   payload_position(0) = payload_odom.pose.pose.position.x;
   payload_position(1) = payload_odom.pose.pose.position.y;
   payload_position(2) = payload_odom.pose.pose.position.z;
-  payload_linear_velocity(0) = payload_odom.twist.twist.linear.x;
-  payload_linear_velocity(1) = payload_odom.twist.twist.linear.y;
-  payload_linear_velocity(2) = payload_odom.twist.twist.linear.z;
 }
 
 void initialized_params(){
@@ -80,9 +87,9 @@ void initialized_params(){
          0, 1, 0,
          0, 0, 1;
   lambda = 1.5;
-  double gamma_gain = 0.01;
+  double gamma_gain = 3.0;
   gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
-  double K_d_gain = 30;
+  double K_d_gain = 5;
   K_d = Eigen::Matrix<double, 6, 6>::Identity() * K_d_gain;
 }
 
@@ -151,6 +158,11 @@ int main(int argc, char **argv)
     double now = ros::Time::now().toSec();
     double dt = now - past;
 
+    double yaw = atan2(payload_reference_linear_velocity(1), payload_reference_linear_velocity(0));
+    // R_d <<  cos(-yaw), sin(-yaw), 0,
+    //        -sin(-yaw), cos(-yaw), 0,
+    //                 0,         0, 1;
+
     // compute error signals
     Eigen::Matrix3d Re = R_d.transpose() * R;
     Eigen::Vector3d we;
@@ -207,7 +219,7 @@ int main(int argc, char **argv)
     Eigen::Matrix<double, 10, 1> o_i_hat_dot = -gamma_o * Y_o.transpose() * s;
 
     // implement control law
-    Eigen::Matrix<double, 6, 1> F_i = /*Y_o * o_i_hat*/ - K_d * s;
+    Eigen::Matrix<double, 6, 1> F_i = Y_o * o_i_hat - K_d * s;
 
     // transfer to wrench
     Eigen::Matrix<double, 6, 6> M_i_inverse = Eigen::Matrix<double, 6, 6>::Identity();
@@ -226,10 +238,11 @@ int main(int argc, char **argv)
     robot_cmd.torque.y = wrench(4);
     robot_cmd.torque.z = wrench(5);
 
-    std::cout << we << std::endl;
-    std::cout << velocity_error << std::endl;
-    std::cout << position_error << std::endl << std::endl;
-    // std::cout << dt << std::endl;
+    std::cout << "-------" << std::endl;
+    std::cout << o_i_hat << std::endl;
+    // std::cout << payload_linear_velocity << std::endl << std::endl;
+    // std::cout << Y_o << std::endl << std::endl;
+    std::cout << "-------" << std::endl;
 
     // robot_cmd.force.z = 1.1 * 0.5 / 2 * 9.81;
     past = now;

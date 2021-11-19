@@ -125,7 +125,7 @@
 
 
     <link name="robot_link_1">
-      <pose>1.2 0 -0.08 0 0 0</pose>
+      <pose>1.2 0 -0.07 0 0 0</pose>
         <inertial>
           <inertia>
             <ixx>0.004</ixx>
@@ -162,7 +162,7 @@
       <pose>0.00 0.0 0.0 0 0.0 0.0</pose>
     </joint>
     <link name="robot_link_2">
-      <pose>-1.2 0 -0.08 0 0 0</pose>
+      <pose>-1.2 0 -0.07 0 0 0</pose>
         <inertial>
           <inertia>
             <ixx>0.004</ixx>
@@ -244,7 +244,7 @@
     <joint name="payload_imu_joint" type="fixed">
       <parent>obstacle</parent>
       <child>payload_IMU</child>
-      <pose>-0.00 0.0 0.0 0 0.0 0.0</pose>
+      <pose>0.00 0.0 0.0 0 0.0 0.0</pose>
     </joint>
 
 
