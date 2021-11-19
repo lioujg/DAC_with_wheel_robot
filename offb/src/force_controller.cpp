@@ -7,6 +7,7 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Point.h>
+#include <tf/transform_datatypes.h>
 
 Eigen::Matrix3d R;
 Eigen::Matrix3d R_d;
@@ -41,6 +42,9 @@ void payload_orientation_cb(const sensor_msgs::Imu::ConstPtr &msg){
     payload_angular_velocity(0) = payload_imu.angular_velocity.x;
     payload_angular_velocity(1) = payload_imu.angular_velocity.y;
     payload_angular_velocity(2) = payload_imu.angular_velocity.z;
+
+    auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
+    std::cout << "euler: " << euler << std::endl;
   }else if(isnan(payload_imu.angular_velocity.x) != 0){
     std::cout << "I meet something cool like nan Imu!!" << std::endl;
   }
@@ -87,7 +91,7 @@ void initialized_params(){
          0, 1, 0,
          0, 0, 1;
   lambda = 1.5;
-  double gamma_gain = 3.0;
+  double gamma_gain = 3;
   gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
   double K_d_gain = 5;
   K_d = Eigen::Matrix<double, 6, 6>::Identity() * K_d_gain;
@@ -231,16 +235,22 @@ int main(int argc, char **argv)
 
 
     geometry_msgs::Wrench robot_cmd;
-    robot_cmd.force.x = wrench(0);
-    robot_cmd.force.y = wrench(1);
-    robot_cmd.force.z = 1.05 * 5 / 2 * 9.81;
-    robot_cmd.torque.x = wrench(3);
-    robot_cmd.torque.y = wrench(4);
-    robot_cmd.torque.z = wrench(5);
+    if(isnan(wrench(0)) != 0){
+      std::cout << "I meet something cool like nan wrench!!" << std::endl;
+      std::cout << "Please restart the controller and try again." << std::endl;
+    }else{
+      robot_cmd.force.x = wrench(0);
+      robot_cmd.force.y = wrench(1);
+      robot_cmd.force.z = 1.05 * 5 / 2 * 9.81;
+      robot_cmd.torque.x = wrench(3);
+      robot_cmd.torque.y = wrench(4);
+      robot_cmd.torque.z = wrench(5);
+    }
 
     std::cout << "-------" << std::endl;
-    std::cout << o_i_hat << std::endl;
-    // std::cout << payload_linear_velocity << std::endl << std::endl;
+    // std::cout << o_i_hat << std::endl;
+    std::cout << wrench << std::endl;
+    std::cout << position_error << std::endl << std::endl;
     // std::cout << Y_o << std::endl << std::endl;
     std::cout << "-------" << std::endl;
 
