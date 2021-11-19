@@ -257,8 +257,8 @@ int main(int argc, char **argv)
     }
 
     std::cout << "-------" << std::endl;
-    // std::cout << o_i_hat << std::endl;
-    std::cout << desired_yaw << std::endl;
+    std::cout << o_i_hat << std::endl;
+    // std::cout << desired_yaw << std::endl;
     std::cout << "tf: " << payload_yaw << std::endl << std::endl;
     // std::cout << "eigen: " << yaw << std::endl << std::endl;
     std::cout << "-------" << std::endl;
