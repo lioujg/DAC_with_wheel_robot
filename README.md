@@ -23,3 +23,7 @@ roslaunch rotors_gazebo wheel_robots.launch
 ```
 roslaunch rotors_gazebo wheel_robots_controller.launch
 ```
+* Start the trajectory
+```
+rosparam set /start true
+```
