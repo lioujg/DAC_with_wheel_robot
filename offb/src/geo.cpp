@@ -147,18 +147,19 @@ int main(int argc, char **argv)
     p7.acc << 0,0,0;
     p7.yaw = 0;
 
-    p8.pos << 1.5,0,0;
+    p8.pos << 0.5,0,0;
     p8.vel << 0,0,0;
     p8.acc << 0,0,0;
     p8.yaw = 0;
 
-  path.push_back(segments(p1,p2,4.0));
-  path.push_back(segments(p2,p3,4.0));
-  path.push_back(segments(p3,p4,4.0));
-  path.push_back(segments(p4,p5,4.0));
-  path.push_back(segments(p5,p6,4.0));
-  path.push_back(segments(p6,p7,4.0));
-  path.push_back(segments(p7,p8,4.0));
+  float duration = 6.0;
+  path.push_back(segments(p1,p2,duration));
+  path.push_back(segments(p2,p3,duration));
+  path.push_back(segments(p3,p4,duration));
+  path.push_back(segments(p4,p5,duration));
+  path.push_back(segments(p5,p6,duration));
+  path.push_back(segments(p6,p7,duration));
+  path.push_back(segments(p7,p8,duration));
 #endif
 
 

@@ -8,6 +8,7 @@
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Point.h>
 #include <tf/transform_datatypes.h>
+#include <cmath>
 
 Eigen::Matrix3d R;
 Eigen::Matrix3d R_d;
@@ -22,10 +23,14 @@ Eigen::Vector3d payload_reference_linear_acceleration;
 Eigen::Vector3d payload_reference_angular_acceleration;
 Eigen::Vector3d r_i;
 
+double desired_yaw;
+double payload_roll, payload_yaw, payload_pitch;
+
 // gain
 double lambda;
 Eigen::Matrix<double, 10, 10> gamma_o;
 Eigen::Matrix<double, 6, 6> K_d;
+double K_p;
 
 void payload_orientation_cb(const sensor_msgs::Imu::ConstPtr &msg){
   sensor_msgs::Imu payload_imu;
@@ -43,8 +48,8 @@ void payload_orientation_cb(const sensor_msgs::Imu::ConstPtr &msg){
     payload_angular_velocity(1) = payload_imu.angular_velocity.y;
     payload_angular_velocity(2) = payload_imu.angular_velocity.z;
 
-    auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
-    std::cout << "euler: " << euler << std::endl;
+    tf::Quaternion quaternion(q.x(), q.y(), q.z(), q.w());
+    tf::Matrix3x3(quaternion).getRPY(payload_roll, payload_pitch, payload_yaw);
   }else if(isnan(payload_imu.angular_velocity.x) != 0){
     std::cout << "I meet something cool like nan Imu!!" << std::endl;
   }
@@ -68,6 +73,9 @@ void reference_cb(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr 
   payload_reference_angular_acceleration(0) = 0;
   payload_reference_angular_acceleration(1) = 0;
   payload_reference_angular_acceleration(2) = 0;
+
+  // desired_yaw = atan2(payload_reference_linear_velocity(1), payload_reference_linear_velocity(0));
+  // payload_reference_angular_velocity(2) = K_p * (desired_yaw - payload_yaw);
 }
 
 void payload_odom_cb(const nav_msgs::Odometry::ConstPtr &msg){
@@ -93,8 +101,9 @@ void initialized_params(){
   lambda = 1.5;
   double gamma_gain = 3;
   gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
-  double K_d_gain = 5;
+  double K_d_gain = 15;
   K_d = Eigen::Matrix<double, 6, 6>::Identity() * K_d_gain;
+  K_p = 2.5;
 }
 
 Eigen::Vector3d vee_map(Eigen::Matrix3d Matrix){
@@ -162,10 +171,10 @@ int main(int argc, char **argv)
     double now = ros::Time::now().toSec();
     double dt = now - past;
 
-    double yaw = atan2(payload_reference_linear_velocity(1), payload_reference_linear_velocity(0));
-    // R_d <<  cos(-yaw), sin(-yaw), 0,
-    //        -sin(-yaw), cos(-yaw), 0,
-    //                 0,         0, 1;
+    // R_d <<  cos(-desired_yaw), sin(-desired_yaw), 0,
+    //        -sin(-desired_yaw), cos(-desired_yaw), 0,
+    //                         0,                 0, 1;
+
 
     // compute error signals
     Eigen::Matrix3d Re = R_d.transpose() * R;
@@ -249,9 +258,9 @@ int main(int argc, char **argv)
 
     std::cout << "-------" << std::endl;
     // std::cout << o_i_hat << std::endl;
-    std::cout << wrench << std::endl;
-    std::cout << position_error << std::endl << std::endl;
-    // std::cout << Y_o << std::endl << std::endl;
+    std::cout << desired_yaw << std::endl;
+    std::cout << "tf: " << payload_yaw << std::endl << std::endl;
+    // std::cout << "eigen: " << yaw << std::endl << std::endl;
     std::cout << "-------" << std::endl;
 
     // robot_cmd.force.z = 1.1 * 0.5 / 2 * 9.81;
