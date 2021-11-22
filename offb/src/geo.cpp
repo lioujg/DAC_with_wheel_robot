@@ -112,42 +112,42 @@ int main(int argc, char **argv)
 	path.push_back(segments(p6, p7, 4));
 	path.push_back(segments(p7, p8, 6));
 #else
-	p1.pos << 0.5,0,0;
+	p1.pos << 0.5,0,0.46;
     p1.vel << 0,0,0;
     p1.acc << 0,0,0;
     p1.yaw = 0;
 
-    p2.pos << 3.5,5,0;
+    p2.pos << 3.5,5,0.46;
     p2.vel << 0,0,0;
     p2.acc << 0,0,0;
     p2.yaw = 0;
 
-    p3.pos << 12.5,0,0;
+    p3.pos << 12.5,0,0.46;
     p3.vel << 0,0,0;
     p3.acc << 0,0,0;
     p3.yaw = 0;
 
-    p4.pos << 3.5,-5,0;
+    p4.pos << 3.5,-5,0.46;
     p4.vel << 0,0,0;
     p4.acc << 0,0,0;
     p4.yaw = 0;
 
-    p5.pos << -2.5,5,0;
+    p5.pos << -2.5,5,0.46;
     p5.vel << 0,0,0;
     p5.acc << 0,0,0;
     p5.yaw = 0;
 
-    p6.pos << -11.5,0,0;
+    p6.pos << -11.5,0,0.46;
     p6.vel << 0,0,0;
     p6.acc << 0,0,0;
     p6.yaw = 0;
 
-    p7.pos << -2.5,-5,0;
+    p7.pos << -2.5,-5,0.46;
     p7.vel << 0,0,0;
     p7.acc << 0,0,0;
     p7.yaw = 0;
 
-    p8.pos << 0.5,0,0;
+    p8.pos << 0.5,0,0.46;
     p8.vel << 0,0,0;
     p8.acc << 0,0,0;
     p8.yaw = 0;
