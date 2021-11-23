@@ -211,6 +211,7 @@ int main(int argc, char **argv)
 			ax = 0;
 			ay = 0;
 			az = 0;
+			nh.setParam("/start",true);
 		} else {
 
 			vir_x = data[tick].pos(0);

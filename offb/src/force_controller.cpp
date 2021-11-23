@@ -23,6 +23,7 @@ Eigen::Vector3d r_i;
 Eigen::Vector3d payload_linear_velocity;
 Eigen::Vector3d payload_angular_velocity;
 Eigen::Vector3d payload_position;
+double payload_roll, payload_yaw, payload_pitch;
 
 // state reference
 Eigen::Vector3d payload_reference_linear_velocity;
@@ -30,10 +31,9 @@ Eigen::Vector3d payload_reference_angular_velocity;
 Eigen::Vector3d payload_reference_position;
 Eigen::Vector3d payload_reference_linear_acceleration;
 Eigen::Vector3d payload_reference_angular_acceleration;
-
 double desired_yaw;
-double payload_roll, payload_yaw, payload_pitch;
-double N_o;
+
+Eigen::Matrix<double, 10, 1> o_i_hat;
 std::queue<Eigen::Matrix<double, 10, 1>> ICL_queue;
 bool pop_on = false;
 double g = 9.81;
@@ -44,20 +44,29 @@ Eigen::Matrix<double, 10, 10> gamma_o;
 Eigen::Matrix<double, 6, 6> K_d;
 double K_p;
 double k_cl_gain;
+double N_o;
+double adaptive_gain;
 
 void initialized_params(){
   // initialize the desired rotation matrix
   R_d << 1, 0, 0,
          0, 1, 0,
          0, 0, 1;
-  lambda = 1.5;
-  double gamma_gain = 3;
+  lambda = 0.5;
+  double gamma_gain = 0.1;
   gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
-  double K_d_gain = 32;
-  K_d = Eigen::Matrix<double, 6, 6>::Identity() * K_d_gain;
-  K_p = 2.5;
-  N_o = 10;
-  k_cl_gain = 0.1;
+  double Kdl_gain = 35;
+  double Kdr_gain = 30;
+  K_d = Eigen::Matrix<double, 6, 6>::Identity();
+  K_d.topLeftCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdl_gain;
+  K_d.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdr_gain;
+
+  o_i_hat = Eigen::MatrixXd::Zero(10, 1);
+  o_i_hat(0, 0) = 2.5;
+  // K_p = 2.5;
+  N_o = 20;
+  k_cl_gain = 0.8;
+  adaptive_gain = 1 / 10000;
 }
 
 void payload_orientation_cb(const sensor_msgs::Imu::ConstPtr &msg){
@@ -79,7 +88,7 @@ void payload_orientation_cb(const sensor_msgs::Imu::ConstPtr &msg){
     tf::Quaternion quaternion(q.x(), q.y(), q.z(), q.w());
     tf::Matrix3x3(quaternion).getRPY(payload_roll, payload_pitch, payload_yaw);
   }else if(isnan(payload_imu.angular_velocity.x) != 0){
-    std::cout << "I meet something cool like nan Imu!!" << std::endl;
+    std::cout << "I meet something cool like Imu nan!!" << std::endl;
   }
 }
 
@@ -110,7 +119,7 @@ void payload_odom_cb(const nav_msgs::Odometry::ConstPtr &msg){
   nav_msgs::Odometry payload_odom;
   payload_odom = *msg;
   if(isnan(payload_odom.twist.twist.linear.x) != 0){
-    std::cout << "I meet something cool like nan odom!!" << std::endl;
+    std::cout << "I meet something cool like odom nan!!" << std::endl;
   }else{
     payload_linear_velocity(0) = payload_odom.twist.twist.linear.x;
     payload_linear_velocity(1) = payload_odom.twist.twist.linear.y;
@@ -187,12 +196,13 @@ int main(int argc, char **argv)
 
   ros::Publisher robot_controller_pub = nh.advertise<geometry_msgs::Wrench>("robot_wrench",4);
   ros::Rate loop_rate(20);
+  initialized_params();
 
   while(ros::ok()){
-    initialized_params();
     static double past;
     double now = ros::Time::now().toSec();
-    double dt = now - past;
+    // double dt = now - past;
+    double dt = 0.05;
 
     // R_d <<  cos(-desired_yaw), sin(-desired_yaw), 0,
     //        -sin(-desired_yaw), cos(-desired_yaw), 0,
@@ -201,8 +211,7 @@ int main(int argc, char **argv)
 
     // compute error signals
     Eigen::Matrix3d Re = R_d.transpose() * R;
-    Eigen::Vector3d we;
-    we = payload_angular_velocity - payload_reference_angular_velocity;
+    Eigen::Vector3d we = payload_angular_velocity - payload_reference_angular_velocity;
 
     // compute velocity error s
     Eigen::Matrix3d Pa_Re;
@@ -226,11 +235,11 @@ int main(int argc, char **argv)
     // q_r dot is the combination of v_r and w_r
     // q_r double dot is the combination of a_r and alpha_r
     Eigen::Vector3d a_r = payload_reference_linear_acceleration - lambda * velocity_error;
+    Eigen::Vector3d v_r = payload_reference_linear_velocity - lambda * position_error;
     // not sure term
     Eigen::Vector3d al_r = payload_reference_angular_acceleration - lambda * hat_map(payload_reference_angular_velocity) * R_d * Pa_Re_V -
                                                                     lambda * R_d * vee_map(Pa(hat_map(R_d.transpose() * we) * Re));
     Eigen::Vector3d w_r = payload_reference_angular_velocity - lambda * R_d * Pa_Re_V;
-    Eigen::Vector3d v_r = payload_reference_linear_velocity - lambda * position_error;
 
     Eigen::Matrix<double, 3, 10> Y_l;
     Eigen::Matrix<double, 3, 10> Y_r;
@@ -272,7 +281,7 @@ int main(int argc, char **argv)
     y_l.block<3, 6>(0, 4) = Eigen::MatrixXd::Zero(3, 6);
 
     y_r.block<3, 1>(0, 0) = Eigen::MatrixXd::Zero(3, 1);
-    y_r.block<3, 3>(0, 1) = hat_map(payload_angular_velocity - payload_angular_velocity_last) * R;
+    y_r.block<3, 3>(0, 1) = hat_map(payload_linear_velocity - payload_linear_velocity_last) * R;
     y_r.block<3, 6>(0, 4) = R * regressor_helper_function(R.transpose() * (payload_angular_velocity - payload_angular_velocity_last)) +
                             hat_map(payload_angular_velocity) * R * regressor_helper_function(R.transpose() * payload_angular_velocity) * dt;
 
@@ -289,13 +298,12 @@ int main(int argc, char **argv)
     M_i.bottomLeftCorner(3, 3) = hat_map(R * r_i);
     Eigen::Matrix<double, 6, 1> true_tau_integral = M_i * wrench * dt;
 
-    static Eigen::Matrix<double, 10, 1> o_i_hat = Eigen::MatrixXd::Zero(10, 1);
-    Eigen::Matrix<double, 6, 1> y_o_cl_integral_a_hat = y_o_cl_integral * o_i_hat;
+    Eigen::Matrix<double, 6, 1> y_o_cl_integral_o_i_hat = y_o_cl_integral * o_i_hat;
 
     if(pop_on == true){
       ICL_queue.pop();
     }
-    ICL_queue.push(y_o_cl_integral.transpose() * (y_o_cl_integral_a_hat - true_tau_integral));
+    ICL_queue.push(y_o_cl_integral.transpose() * (y_o_cl_integral_o_i_hat - true_tau_integral));
     ICL_sum = ICL_queue_sum(ICL_queue);
 
     payload_linear_velocity_last = payload_linear_velocity;
@@ -310,7 +318,7 @@ int main(int argc, char **argv)
 
     // compute o_i hat
 
-    Eigen::Matrix<double, 10, 1> o_i_hat_dot = -gamma_o * Y_o.transpose() * s - k_cl_gain * gamma_o * ICL_sum;
+    Eigen::Matrix<double, 10, 1> o_i_hat_dot = -adaptive_gain * gamma_o * Y_o.transpose() * s - k_cl_gain * gamma_o * ICL_sum;
 
     // implement the adaptation law
     o_i_hat = o_i_hat + o_i_hat_dot * dt;
@@ -326,7 +334,7 @@ int main(int argc, char **argv)
 
     geometry_msgs::Wrench robot_cmd;
     if(isnan(wrench(0)) != 0){
-      std::cout << "I meet something cool like nan wrench!!" << std::endl;
+      std::cout << "I meet something cool like wrench nan!!" << std::endl;
       std::cout << "Please restart the controller and try again." << std::endl;
     }else{
       robot_cmd.force.x = wrench(0);
@@ -343,7 +351,7 @@ int main(int argc, char **argv)
     // std::cout << desired_yaw << std::endl;
     // std::cout << "tf: " << payload_yaw << std::endl << std::endl;
     // std::cout << k_cl_gain * gamma_o * ICL_sum << std::endl << std::endl;
-    std::cout << a_r << std::endl << std::endl;
+    std::cout << "6666: " << ICL_sum << std::endl << std::endl;
     std::cout << "-------" << std::endl;
 
     past = now;
