@@ -14,21 +14,22 @@
 #include <numeric>
 #include <algorithm>
 
+// pose
 Eigen::Matrix3d R;
 Eigen::Matrix3d R_d;
+Eigen::Vector3d r_i;
 
+// state measurement
 Eigen::Vector3d payload_linear_velocity;
 Eigen::Vector3d payload_angular_velocity;
+Eigen::Vector3d payload_position;
+
+// state reference
 Eigen::Vector3d payload_reference_linear_velocity;
 Eigen::Vector3d payload_reference_angular_velocity;
-Eigen::Vector3d payload_position;
 Eigen::Vector3d payload_reference_position;
 Eigen::Vector3d payload_reference_linear_acceleration;
 Eigen::Vector3d payload_reference_angular_acceleration;
-Eigen::Vector3d r_i;
-
-
-
 
 double desired_yaw;
 double payload_roll, payload_yaw, payload_pitch;
@@ -43,6 +44,21 @@ Eigen::Matrix<double, 10, 10> gamma_o;
 Eigen::Matrix<double, 6, 6> K_d;
 double K_p;
 double k_cl_gain;
+
+void initialized_params(){
+  // initialize the desired rotation matrix
+  R_d << 1, 0, 0,
+         0, 1, 0,
+         0, 0, 1;
+  lambda = 1.5;
+  double gamma_gain = 3;
+  gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
+  double K_d_gain = 32;
+  K_d = Eigen::Matrix<double, 6, 6>::Identity() * K_d_gain;
+  K_p = 2.5;
+  N_o = 10;
+  k_cl_gain = 0.1;
+}
 
 void payload_orientation_cb(const sensor_msgs::Imu::ConstPtr &msg){
   sensor_msgs::Imu payload_imu;
@@ -103,21 +119,6 @@ void payload_odom_cb(const nav_msgs::Odometry::ConstPtr &msg){
   payload_position(0) = payload_odom.pose.pose.position.x;
   payload_position(1) = payload_odom.pose.pose.position.y;
   payload_position(2) = payload_odom.pose.pose.position.z;
-}
-
-void initialized_params(){
-  // initialize the desired rotation matrix
-  R_d << 1, 0, 0,
-         0, 1, 0,
-         0, 0, 1;
-  lambda = 1.5;
-  double gamma_gain = 3;
-  gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
-  double K_d_gain = 32;
-  K_d = Eigen::Matrix<double, 6, 6>::Identity() * K_d_gain;
-  K_p = 2.5;
-  N_o = 10;
-  k_cl_gain = 0.1;
 }
 
 Eigen::Vector3d vee_map(Eigen::Matrix3d Matrix){
