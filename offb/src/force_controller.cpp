@@ -55,7 +55,7 @@ void initialized_params(){
   lambda = 0.5;
   double gamma_gain = 0.1;
   gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
-  double Kdl_gain = 35;
+  double Kdl_gain = 5;
   double Kdr_gain = 30;
   K_d = Eigen::Matrix<double, 6, 6>::Identity();
   K_d.topLeftCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdl_gain;
@@ -64,9 +64,9 @@ void initialized_params(){
   o_i_hat = Eigen::MatrixXd::Zero(10, 1);
   o_i_hat(0, 0) = 2.5;
   // K_p = 2.5;
-  N_o = 20;
-  k_cl_gain = 0.8;
-  adaptive_gain = 1 / 10000;
+  N_o = 10;
+  k_cl_gain = 2.5;
+  adaptive_gain = 1 / 1;
 }
 
 void payload_orientation_cb(const sensor_msgs::Imu::ConstPtr &msg){
@@ -173,10 +173,17 @@ Eigen::Matrix<double, 3, 6> regressor_helper_function(Eigen::Vector3d Vector){
 
 Eigen::Matrix<double, 10, 1> ICL_queue_sum(std::queue<Eigen::Matrix<double, 10, 1>> queue){
   Eigen::Matrix<double, 10, 1> sum = Eigen::MatrixXd::Zero(10, 1);
-  while(!queue.empty()){
+  // while(!queue.empty()){
+  //   sum += queue.front();
+  //   queue.pop();
+  // }
+
+  int size = queue.size();
+  for(int i=0;i<size;i++){
     sum += queue.front();
     queue.pop();
   }
+
   return sum;
 }
 
@@ -347,11 +354,12 @@ int main(int argc, char **argv)
     }
 
     std::cout << "-------" << std::endl;
-    std::cout << o_i_hat << std::endl << std::endl;
+    std::cout << "o_i_hat: " << o_i_hat(0) << std::endl << std::endl;
     // std::cout << desired_yaw << std::endl;
     // std::cout << "tf: " << payload_yaw << std::endl << std::endl;
     // std::cout << k_cl_gain * gamma_o * ICL_sum << std::endl << std::endl;
-    std::cout << "6666: " << ICL_sum << std::endl << std::endl;
+    std::cout << "ICL: " << ICL_sum(0) << std::endl << std::endl;
+    std::cout << "al_r: " << al_r << std::endl << std::endl;
     std::cout << "-------" << std::endl;
 
     past = now;
