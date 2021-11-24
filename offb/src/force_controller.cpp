@@ -37,6 +37,7 @@ Eigen::Matrix<double, 10, 1> o_i_hat;
 std::queue<Eigen::Matrix<double, 10, 1>> ICL_queue;
 bool pop_on = false;
 double g = 9.81;
+double control_rate = 20;
 
 // gain
 double lambda;
@@ -55,17 +56,17 @@ void initialized_params(){
   lambda = 0.5;
   double gamma_gain = 0.1;
   gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
-  double Kdl_gain = 5;
+  double Kdl_gain = 1.5;
   double Kdr_gain = 30;
   K_d = Eigen::Matrix<double, 6, 6>::Identity();
   K_d.topLeftCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdl_gain;
   K_d.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdr_gain;
 
   o_i_hat = Eigen::MatrixXd::Zero(10, 1);
-  o_i_hat(0, 0) = 2.5;
+  o_i_hat(0, 0) = 0.0;
   // K_p = 2.5;
   N_o = 10;
-  k_cl_gain = 2.5;
+  k_cl_gain = 3.0;
   adaptive_gain = 1 / 1;
 }
 
@@ -202,14 +203,14 @@ int main(int argc, char **argv)
   ros::Subscriber payload_odom_sub = nh.subscribe<nav_msgs::Odometry>("/payload/position",4,payload_odom_cb);
 
   ros::Publisher robot_controller_pub = nh.advertise<geometry_msgs::Wrench>("robot_wrench",4);
-  ros::Rate loop_rate(20);
+  ros::Rate loop_rate(control_rate);
   initialized_params();
+  double dt = 0;
 
   while(ros::ok()){
     static double past;
     double now = ros::Time::now().toSec();
     // double dt = now - past;
-    double dt = 0.05;
 
     // R_d <<  cos(-desired_yaw), sin(-desired_yaw), 0,
     //        -sin(-desired_yaw), cos(-desired_yaw), 0,
@@ -310,7 +311,9 @@ int main(int argc, char **argv)
     if(pop_on == true){
       ICL_queue.pop();
     }
-    ICL_queue.push(y_o_cl_integral.transpose() * (y_o_cl_integral_o_i_hat - true_tau_integral));
+    if(dt!=0){
+      ICL_queue.push(y_o_cl_integral.transpose() * (y_o_cl_integral_o_i_hat - true_tau_integral));
+    }
     ICL_sum = ICL_queue_sum(ICL_queue);
 
     payload_linear_velocity_last = payload_linear_velocity;
@@ -359,10 +362,11 @@ int main(int argc, char **argv)
     // std::cout << "tf: " << payload_yaw << std::endl << std::endl;
     // std::cout << k_cl_gain * gamma_o * ICL_sum << std::endl << std::endl;
     std::cout << "ICL: " << ICL_sum(0) << std::endl << std::endl;
-    std::cout << "al_r: " << al_r << std::endl << std::endl;
+    // std::cout << "ICL nan: " << y_o_cl_integral.transpose() * (y_o_cl_integral_o_i_hat - true_tau_integral) << std::endl << std::endl;
     std::cout << "-------" << std::endl;
 
     past = now;
+    dt = 1 / control_rate;
 
   	robot_controller_pub.publish(robot_cmd);
     loop_rate.sleep();
