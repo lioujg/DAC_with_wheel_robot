@@ -38,6 +38,8 @@ std::queue<Eigen::Matrix<double, 10, 1>> ICL_queue;
 bool pop_on = false;
 double g = 9.81;
 double control_rate = 20;
+double angle_error;
+bool rotation = true;
 
 // gain
 double lambda;
@@ -57,14 +59,17 @@ void initialized_params(){
   double gamma_gain = 0.1;
   gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
   double Kdl_gain = 1.5;
-  double Kdr_gain = 30;
+  double Kdr_gain = 1.0;
   K_d = Eigen::Matrix<double, 6, 6>::Identity();
   K_d.topLeftCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdl_gain;
   K_d.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdr_gain;
 
   o_i_hat = Eigen::MatrixXd::Zero(10, 1);
-  o_i_hat(0, 0) = 0.0;
-  // K_p = 2.5;
+  o_i_hat(0) = 0.0;
+  o_i_hat(4) = 0.052083333 / 2;
+  o_i_hat(7) = 1.692708333 / 2;
+  o_i_hat(9) = 1.692708333 / 2 * 1000;
+  K_p = 3.0;
   N_o = 10;
   k_cl_gain = 3.0;
   adaptive_gain = 1 / 1;
@@ -101,7 +106,7 @@ void reference_cb(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr 
   payload_reference_linear_velocity(2) = reference_input.velocities[0].linear.z;
   payload_reference_angular_velocity(0) = 0;
   payload_reference_angular_velocity(1) = 0;
-  payload_reference_angular_velocity(2) = 0;
+  // payload_reference_angular_velocity(2) = 0;
   payload_reference_position(0) = reference_input.transforms[0].translation.x;
   payload_reference_position(1) = reference_input.transforms[0].translation.y;
   payload_reference_position(2) = reference_input.transforms[0].translation.z;
@@ -112,8 +117,20 @@ void reference_cb(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr 
   payload_reference_angular_acceleration(1) = 0;
   payload_reference_angular_acceleration(2) = 0;
 
-  // desired_yaw = atan2(payload_reference_linear_velocity(1), payload_reference_linear_velocity(0));
-  // payload_reference_angular_velocity(2) = K_p * (desired_yaw - payload_yaw);
+  if(rotation == true){
+    if(payload_reference_linear_velocity(0) != 0){
+      desired_yaw = atan2(payload_reference_linear_velocity(1), payload_reference_linear_velocity(0));
+    }
+    angle_error = desired_yaw - payload_yaw;
+    if(angle_error > M_PI){
+      angle_error = angle_error - 2 * M_PI;
+    }else if(angle_error < -M_PI){
+      angle_error = angle_error + 2 * M_PI;
+    }
+    payload_reference_angular_velocity(2) = K_p * angle_error;
+  }else{
+    payload_reference_angular_velocity(2) = 0;
+  }
 }
 
 void payload_odom_cb(const nav_msgs::Odometry::ConstPtr &msg){
@@ -203,6 +220,9 @@ int main(int argc, char **argv)
   ros::Subscriber payload_odom_sub = nh.subscribe<nav_msgs::Odometry>("/payload/position",4,payload_odom_cb);
 
   ros::Publisher robot_controller_pub = nh.advertise<geometry_msgs::Wrench>("robot_wrench",4);
+  ros::Publisher estimated_m_pub = nh.advertise<geometry_msgs::Point>("/estimated/mass",4);
+  ros::Publisher estimated_I_pub = nh.advertise<geometry_msgs::Point>("/estimated/inertia",4);
+
   ros::Rate loop_rate(control_rate);
   initialized_params();
   double dt = 0;
@@ -212,9 +232,11 @@ int main(int argc, char **argv)
     double now = ros::Time::now().toSec();
     // double dt = now - past;
 
-    // R_d <<  cos(-desired_yaw), sin(-desired_yaw), 0,
-    //        -sin(-desired_yaw), cos(-desired_yaw), 0,
-    //                         0,                 0, 1;
+    if(rotation == true){
+      R_d <<  cos(-desired_yaw), sin(-desired_yaw), 0,
+             -sin(-desired_yaw), cos(-desired_yaw), 0,
+                              0,                 0, 1;
+    }
 
 
     // compute error signals
@@ -357,18 +379,26 @@ int main(int argc, char **argv)
     }
 
     std::cout << "-------" << std::endl;
-    std::cout << "o_i_hat: " << o_i_hat(0) << std::endl << std::endl;
-    // std::cout << desired_yaw << std::endl;
-    // std::cout << "tf: " << payload_yaw << std::endl << std::endl;
-    // std::cout << k_cl_gain * gamma_o * ICL_sum << std::endl << std::endl;
-    std::cout << "ICL: " << ICL_sum(0) << std::endl << std::endl;
-    // std::cout << "ICL nan: " << y_o_cl_integral.transpose() * (y_o_cl_integral_o_i_hat - true_tau_integral) << std::endl << std::endl;
+    std::cout << "m: " << o_i_hat(0) << std::endl << std::endl;
+    std::cout << "Ixx: " << o_i_hat(4) << std::endl << std::endl;
+    std::cout << "Iyy: " << o_i_hat(7) << std::endl << std::endl;
+    std::cout << "Izz: " << o_i_hat(9) << std::endl << std::endl;
+    // std::cout << "angle error: " << angle_error << std::endl << std::endl;
     std::cout << "-------" << std::endl;
 
     past = now;
     dt = 1 / control_rate;
 
+    geometry_msgs::Point mass;
+    geometry_msgs::Point inertia;
+    mass.x = o_i_hat(0);
+    inertia.x = o_i_hat(4);
+    inertia.y = o_i_hat(7);
+    inertia.z = o_i_hat(9);
+
   	robot_controller_pub.publish(robot_cmd);
+    estimated_m_pub.publish(mass);
+    estimated_I_pub.publish(inertia);
     loop_rate.sleep();
     ros::spinOnce();
   }

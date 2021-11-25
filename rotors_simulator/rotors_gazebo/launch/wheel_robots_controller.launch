@@ -17,6 +17,8 @@
         <param name = "r_i_z" type = "double" value = "0" />
         <node name="force_controller" pkg="offb" type="force_controller" output="screen">
             <remap from="robot_wrench" to="robot_1_wrench" />
+            <remap from="/estimated/mass" to="/robot_1/estimated/mass" />
+            <remap from="/estimated/inertia" to="/robot_1/estimated/inertia" />
         </node>
         <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="0 0 1.3 0 2"/>
         <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
@@ -33,6 +35,8 @@
         <param name = "r_i_z" type = "double" value = "0" />
         <node name="force_controller" pkg="offb" type="force_controller" output="screen">
             <remap from="robot_wrench" to="robot_2_wrench" />
+            <remap from="/estimated/mass" to="/robot_2/estimated/mass" />
+            <remap from="/estimated/inertia" to="/robot_2/estimated/inertia" />
         </node>
         <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="0 0 1.3 0 2"/>
         <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
