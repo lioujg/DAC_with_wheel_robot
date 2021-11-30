@@ -54,64 +54,11 @@ int main(int argc, char **argv)
 	//planning
 	qptrajectory plan;
 	path_def path;
-	trajectory_profile p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11;
+	trajectory_profile p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12;
 	std::vector<trajectory_profile> data;
 	double sample = 0.05;
 
-#if 0
-	p1.pos << 0.5, 0, 0.46;
-	p1.vel<< 0, 0, 0;
-	p1.acc<< 0, 0, 0;
-	p1.yaw = 0;
-
-	p2.pos<< 4, 4, 0.46;
-	p2.vel<< 0, 0, 0;
-	p2.acc<< 0, 0, 0;
-	p2.yaw = 0;
-
-	p3.pos<< -4, 4, 0.46;
-	p3.vel<< 0, 0, 0;
-	p3.acc<< 0, 0, 0;
-	p3.yaw = 0;
-
-	p4.pos << -4, -4, 0.46;
-	p4.vel << 0, 0, 0;
-	p4.acc << 0, 0, 0;
-	p4.yaw = 0;
-
-	p5.pos << 4, -4, 0.46;
-	p5.vel << 0, 0, 0;
-	p5.acc << 0, 0, 0;
-	p5.yaw = 0;
-
-	p6.pos<< 4, 4, 0.46;
-	p6.vel<< 0, 0, 0;
-	p6.acc<< 0, 0, 0;
-	p6.yaw = 0;
-
-	p7.pos << -4, 4, 0.46;
-	p7.vel << 0, 0, 0;
-	p7.acc << 0, 0, 0;
-	p7.yaw = 0;
-
-	p8.pos << 0.5, 0, 0.46;
-	p8.vel << 0, 0, 0;
-	p8.acc << 0, 0, 0;
-	p8.yaw = 0;
-
-	p9.pos << 0.5, 0, 0.46;
-	p9.vel << 0, 0, 0;
-	p9.acc << 0, 0, 0;
-	p9.yaw = 0;
-
-	path.push_back(segments(p1, p2, 6));
-	path.push_back(segments(p2, p3, 4));
-	path.push_back(segments(p3, p4, 4));
-	path.push_back(segments(p4, p5, 4));
-	path.push_back(segments(p5, p6, 4));
-	path.push_back(segments(p6, p7, 4));
-	path.push_back(segments(p7, p8, 6));
-#else
+#if 1
 	p1.pos << 0.5,0,0.46;
     p1.vel << 0,0,0;
     p1.acc << 0,0,0;
@@ -120,9 +67,9 @@ int main(int argc, char **argv)
     p2.pos << 3.5,5,0.46;
     p2.vel << 0,0,0;
     p2.acc << 0,0,0;
-    p2.yaw = 0;
+    p2.yaw = 1;
 
-    p3.pos << 12.5,0,0.46;
+    p3.pos << 11.5,0,0.46;
     p3.vel << 0,0,0;
     p3.acc << 0,0,0;
     p3.yaw = 0;
@@ -137,7 +84,7 @@ int main(int argc, char **argv)
     p5.acc << 0,0,0;
     p5.yaw = 0;
 
-    p6.pos << -11.5,0,0.46;
+    p6.pos << -10.5,0,0.46;
     p6.vel << 0,0,0;
     p6.acc << 0,0,0;
     p6.yaw = 0;
@@ -152,6 +99,75 @@ int main(int argc, char **argv)
     p8.acc << 0,0,0;
     p8.yaw = 0;
 
+  float duration = 5.0;
+  path.push_back(segments(p1,p2,duration));
+  path.push_back(segments(p2,p3,duration));
+  path.push_back(segments(p3,p4,duration));
+  path.push_back(segments(p4,p5,duration));
+  path.push_back(segments(p5,p6,duration));
+  path.push_back(segments(p6,p7,duration));
+  path.push_back(segments(p7,p8,duration));
+#else
+  	p1.pos << 0.5,0,0.46;
+    p1.vel << 0,0,0;
+    p1.acc << 0,0,0;
+    p1.yaw = 0;
+
+    p2.pos << 3.5,5,0.46;
+    p2.vel << 0,0,0;
+    p2.acc << 0,0,0;
+    p2.yaw = 0;
+
+    p3.pos << 7,-5,0.46;
+    p3.vel << 0,0,0;
+    p3.acc << 0,0,0;
+    p3.yaw = 0;
+
+    p4.pos << 12.5,0,0.46;
+    p4.vel << 0,0,0;
+    p4.acc << 0,0,0;
+    p4.yaw = 0;
+
+    p5.pos << 7,5,0.46;
+    p5.vel << 0,0,0;
+    p5.acc << 0,0,0;
+    p5.yaw = 0;
+
+    p6.pos << 3.5,-5,0.46;
+    p6.vel << 0,0,0;
+    p6.acc << 0,0,0;
+    p6.yaw = 0;
+
+    p7.pos << -2.5,5,0.46;
+    p7.vel << 0,0,0;
+    p7.acc << 0,0,0;
+    p7.yaw = 0;
+
+    p8.pos << -6,-5,0.46;
+    p8.vel << 0,0,0;
+    p8.acc << 0,0,0;
+    p8.yaw = 0;
+
+    p9.pos << -11.5,0,0.46;
+    p9.vel << 0,0,0;
+    p9.acc << 0,0,0;
+    p9.yaw = 0;
+
+    p10.pos << -6,5,0.46;
+    p10.vel << 0,0,0;
+    p10.acc << 0,0,0;
+    p10.yaw = 0;
+
+    p11.pos << -2.5,-5,0.46;
+    p11.vel << 0,0,0;
+    p11.acc << 0,0,0;
+    p11.yaw = 0;
+
+    p12.pos << 0.5,0,0.46;
+    p12.vel << 0,0,0;
+    p12.acc << 0,0,0;
+    p12.yaw = 0;
+
   float duration = 6.0;
   path.push_back(segments(p1,p2,duration));
   path.push_back(segments(p2,p3,duration));
@@ -160,6 +176,10 @@ int main(int argc, char **argv)
   path.push_back(segments(p5,p6,duration));
   path.push_back(segments(p6,p7,duration));
   path.push_back(segments(p7,p8,duration));
+  path.push_back(segments(p8,p9,duration));
+  path.push_back(segments(p9,p10,duration));
+  path.push_back(segments(p10,p11,duration));
+  path.push_back(segments(p11,p12,duration));
 #endif
 
 
@@ -242,7 +262,7 @@ int main(int argc, char **argv)
 #endif
 		}
 
-#if 0
+#if 1
 		traj.transforms[0].translation.x = vir_x;
 		traj.transforms[0].translation.y = vir_y;
 		traj.transforms[0].translation.z = vir_z;
@@ -253,7 +273,7 @@ int main(int argc, char **argv)
 		traj.accelerations[0].linear.y = ay;
 		traj.accelerations[0].linear.z = az;
 #else
-		float slope = tan(0.04);
+		float slope = tan(0.03);
 		traj.transforms[0].translation.x = vir_x;
 		traj.transforms[0].translation.y = vir_y;
 		traj.transforms[0].translation.z = fabs(vir_x) * slope;

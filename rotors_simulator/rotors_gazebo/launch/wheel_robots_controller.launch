@@ -19,6 +19,7 @@
             <remap from="robot_wrench" to="robot_1_wrench" />
             <remap from="/estimated/mass" to="/robot_1/estimated/mass" />
             <remap from="/estimated/inertia" to="/robot_1/estimated/inertia" />
+            <remap from="/payload_ft_sensor" to="/payload_joint_1_ft_sensor" />
         </node>
         <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="0 0 1.3 0 2"/>
         <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
@@ -37,6 +38,7 @@
             <remap from="robot_wrench" to="robot_2_wrench" />
             <remap from="/estimated/mass" to="/robot_2/estimated/mass" />
             <remap from="/estimated/inertia" to="/robot_2/estimated/inertia" />
+            <remap from="/payload_ft_sensor" to="/payload_joint_2_ft_sensor" />
         </node>
         <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="0 0 1.3 0 2"/>
         <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />

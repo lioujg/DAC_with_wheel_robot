@@ -7,6 +7,7 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Point.h>
+#include <geometry_msgs/WrenchStamped.h>
 #include <tf/transform_datatypes.h>
 #include <cmath>
 #include <iostream>
@@ -24,6 +25,7 @@ Eigen::Vector3d payload_linear_velocity;
 Eigen::Vector3d payload_angular_velocity;
 Eigen::Vector3d payload_position;
 double payload_roll, payload_yaw, payload_pitch;
+Eigen::Matrix<double, 6, 1> true_tau;
 
 // state reference
 Eigen::Vector3d payload_reference_linear_velocity;
@@ -59,17 +61,17 @@ void initialized_params(){
   double gamma_gain = 0.1;
   gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
   double Kdl_gain = 1.5;
-  double Kdr_gain = 1.0;
+  double Kdr_gain = 5.0;
   K_d = Eigen::Matrix<double, 6, 6>::Identity();
   K_d.topLeftCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdl_gain;
   K_d.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdr_gain;
 
   o_i_hat = Eigen::MatrixXd::Zero(10, 1);
-  o_i_hat(0) = 0.0;
+  o_i_hat(0) = 0;
   o_i_hat(4) = 0.052083333 / 2;
   o_i_hat(7) = 1.692708333 / 2;
   o_i_hat(9) = 1.692708333 / 2;
-  K_p = 3.0;
+  K_p = 1.2;
   N_o = 10;
   k_cl_gain = 3.0;
   adaptive_gain = 1 / 1;
@@ -115,7 +117,7 @@ void reference_cb(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr 
   payload_reference_linear_acceleration(2) = reference_input.accelerations[0].linear.z + g;
   payload_reference_angular_acceleration(0) = 0;
   payload_reference_angular_acceleration(1) = 0;
-  payload_reference_angular_acceleration(2) = 0;
+  // payload_reference_angular_acceleration(2) = 0;
 
   if(rotation == true){
     if(payload_reference_linear_velocity(0) != 0){
@@ -127,9 +129,19 @@ void reference_cb(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr 
     }else if(angle_error < -M_PI){
       angle_error = angle_error + 2 * M_PI;
     }
+    static double w_last = 0;
+    double bound = 10.0;
     payload_reference_angular_velocity(2) = K_p * angle_error;
+    payload_reference_angular_acceleration(2) = K_p * angle_error * 0.5;
+    if(payload_reference_angular_acceleration(2) > bound){
+      payload_reference_angular_acceleration(2) = bound;
+    }else if(payload_reference_angular_acceleration(2) < -bound){
+      payload_reference_angular_acceleration(2) = -bound;
+    }
+    w_last = K_p * angle_error;
   }else{
     payload_reference_angular_velocity(2) = 0;
+    payload_reference_angular_acceleration(2) = 0;
   }
 }
 
@@ -146,6 +158,17 @@ void payload_odom_cb(const nav_msgs::Odometry::ConstPtr &msg){
   payload_position(0) = payload_odom.pose.pose.position.x;
   payload_position(1) = payload_odom.pose.pose.position.y;
   payload_position(2) = payload_odom.pose.pose.position.z;
+}
+
+void payload_ft_sensor_cb(const geometry_msgs::WrenchStamped::ConstPtr &msg){
+  geometry_msgs::WrenchStamped payload_ft;
+  payload_ft = *msg;
+  true_tau << payload_ft.wrench.force.x,
+              payload_ft.wrench.force.y,
+              payload_ft.wrench.force.z,
+              payload_ft.wrench.torque.x,
+              payload_ft.wrench.torque.y,
+              payload_ft.wrench.torque.z;
 }
 
 Eigen::Vector3d vee_map(Eigen::Matrix3d Matrix){
@@ -187,6 +210,7 @@ Eigen::Matrix<double, 3, 6> regressor_helper_function(Eigen::Vector3d Vector){
   rhf(0, 2) = Vector(2);
   rhf(1, 4) = Vector(2);
   rhf(2, 5) = Vector(2);
+  return rhf;
 }
 
 Eigen::Matrix<double, 10, 1> ICL_queue_sum(std::queue<Eigen::Matrix<double, 10, 1>> queue){
@@ -218,6 +242,7 @@ int main(int argc, char **argv)
   ros::Subscriber payload_imu_sub = nh.subscribe<sensor_msgs::Imu>("/payload/IMU",4,payload_orientation_cb);
   ros::Subscriber reference_input_sub = nh.subscribe<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/payload/desired_trajectory",4,reference_cb);
   ros::Subscriber payload_odom_sub = nh.subscribe<nav_msgs::Odometry>("/payload/position",4,payload_odom_cb);
+  ros::Subscriber payload_ft_sub = nh.subscribe<geometry_msgs::WrenchStamped>("/payload_ft_sensor",4,payload_ft_sensor_cb);
 
   ros::Publisher robot_controller_pub = nh.advertise<geometry_msgs::Wrench>("robot_wrench",4);
   ros::Publisher estimated_m_pub = nh.advertise<geometry_msgs::Point>("/estimated/mass",4);
@@ -326,7 +351,11 @@ int main(int argc, char **argv)
     Eigen::Matrix<double, 6, 6> M_i = Eigen::Matrix<double, 6, 6>::Identity();
     static Eigen::Matrix<double, 6, 1> wrench = Eigen::MatrixXd::Zero(6, 1);
     M_i.bottomLeftCorner(3, 3) = hat_map(R * r_i);
+#if 1
     Eigen::Matrix<double, 6, 1> true_tau_integral = M_i * wrench * dt;
+#else
+    Eigen::Matrix<double, 6, 1> true_tau_integral = M_i * true_tau * dt;
+#endif
 
     Eigen::Matrix<double, 6, 1> y_o_cl_integral_o_i_hat = y_o_cl_integral * o_i_hat;
 
@@ -380,10 +409,12 @@ int main(int argc, char **argv)
 
     std::cout << "-------" << std::endl;
     std::cout << "m: " << o_i_hat(0) << std::endl << std::endl;
-    std::cout << "Ixx: " << o_i_hat(4) << std::endl << std::endl;
-    std::cout << "Iyy: " << o_i_hat(7) << std::endl << std::endl;
+    // std::cout << "Ixx: " << o_i_hat(4) << std::endl << std::endl;
+    // std::cout << "Iyy: " << o_i_hat(7) << std::endl << std::endl;
     std::cout << "Izz: " << o_i_hat(9) << std::endl << std::endl;
     // std::cout << "angle error: " << angle_error << std::endl << std::endl;
+    std::cout << "alpha: " << payload_reference_angular_acceleration(2) << std::endl << std::endl;
+    // std::cout << "ICL: " << ICL_sum << std::endl << std::endl;
     std::cout << "-------" << std::endl;
 
     past = now;
