@@ -242,6 +242,7 @@ int main(int argc, char **argv)
 #endif
 		}
 
+#if 0
 		traj.transforms[0].translation.x = vir_x;
 		traj.transforms[0].translation.y = vir_y;
 		traj.transforms[0].translation.z = vir_z;
@@ -251,6 +252,26 @@ int main(int argc, char **argv)
 		traj.accelerations[0].linear.x = ax;
 		traj.accelerations[0].linear.y = ay;
 		traj.accelerations[0].linear.z = az;
+#else
+		float slope = tan(0.04);
+		traj.transforms[0].translation.x = vir_x;
+		traj.transforms[0].translation.y = vir_y;
+		traj.transforms[0].translation.z = fabs(vir_x) * slope;
+		traj.velocities[0].linear.x = vx;
+		traj.velocities[0].linear.y = vy;
+		traj.accelerations[0].linear.x = ax;
+		traj.accelerations[0].linear.y = ay;
+		if(vir_x > 0){
+			traj.velocities[0].linear.z = vx * slope;
+			traj.accelerations[0].linear.z = ax * slope;
+		}else if(vir_x < 0){
+			traj.velocities[0].linear.z = -vx * slope;
+			traj.accelerations[0].linear.z = -ax * slope;
+		}else{
+			traj.velocities[0].linear.z = 0;
+			traj.accelerations[0].linear.z = 0;
+		}
+#endif
 
 		traj_pub.publish(traj);
 

@@ -77,6 +77,10 @@
           <lower>0</lower>
         </limit>
       </axis>
+      <sensor name="force_torque" type="force_torque">
+        <update_rate>200</update_rate>
+        <always_on>true</always_on>
+      </sensor>
     </joint>
 
     <link name="payload_link_2">
@@ -121,6 +125,10 @@
           <lower>0</lower>
         </limit>
       </axis>
+      <sensor name="force_torque" type="force_torque">
+        <update_rate>200</update_rate>
+        <always_on>true</always_on>
+      </sensor>
     </joint>
 
 
@@ -257,6 +265,19 @@
       <frameName>world</frameName>
       <xyzOffsets>0 0 0</xyzOffsets>
       <rpyOffsets>0 0 0</rpyOffsets>
+    </plugin>
+
+    <plugin name="ft_sensor" filename="libgazebo_ros_ft_sensor.so">
+      <always_on>true</always_on>
+      <updateRate>200.0</updateRate>
+      <topicName>/payload_joint_1_ft_sensor</topicName>
+      <jointName>payload_joint_1</jointName>
+    </plugin>
+    <plugin name="ft_sensor" filename="libgazebo_ros_ft_sensor.so">
+      <always_on>true</always_on>
+      <updateRate>200.0</updateRate>
+      <topicName>/payload_joint_2_ft_sensor</topicName>
+      <jointName>payload_joint_2</jointName>
     </plugin>
 
   </model>
