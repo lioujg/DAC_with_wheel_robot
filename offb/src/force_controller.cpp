@@ -48,7 +48,8 @@ double lambda;
 Eigen::Matrix<double, 10, 10> gamma_o;
 Eigen::Matrix<double, 6, 6> K_d;
 double K_p;
-double k_cl_gain;
+double k_cl_l_gain, k_cl_r_gain;
+Eigen::Matrix<double, 10, 10> k_cl;
 double N_o;
 double adaptive_gain;
 
@@ -57,24 +58,31 @@ void initialized_params(){
   R_d << 1, 0, 0,
          0, 1, 0,
          0, 0, 1;
-  lambda = 0.5;
+  lambda = 1.1;//0.5;
   double gamma_gain = 0.1;
   gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
-  double Kdl_gain = 1.5;
-  double Kdr_gain = 5.0;
+  double Kdl_gain = 1.2;//1.5;
+  double Kdr_gain = 3.8;//2.5;
   K_d = Eigen::Matrix<double, 6, 6>::Identity();
   K_d.topLeftCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdl_gain;
-  K_d.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdr_gain;
+  K_d.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * 0.01;
+  K_d.bottomRightCorner(1, 1) = Eigen::Matrix<double, 1, 1>::Identity() * Kdr_gain;
 
   o_i_hat = Eigen::MatrixXd::Zero(10, 1);
   o_i_hat(0) = 0;
   o_i_hat(4) = 0.052083333 / 2;
   o_i_hat(7) = 1.692708333 / 2;
-  o_i_hat(9) = 1.692708333 / 2;
-  K_p = 1.2;
-  N_o = 10;
-  k_cl_gain = 3.0;
-  adaptive_gain = 1 / 1;
+  o_i_hat(9) = 0;//1.692708333 / 2 - 0.5;
+  K_p = 2.5;
+  N_o = 20;
+  k_cl_l_gain = 12.0;
+  k_cl_r_gain = 8.0;//36.0;
+  k_cl = Eigen::Matrix<double, 10, 10>::Identity();
+  k_cl.topLeftCorner(4, 4) = Eigen::Matrix<double, 4, 4>::Zero();
+  k_cl.bottomRightCorner(6, 6) = Eigen::Matrix<double, 6, 6>::Zero();
+  k_cl(0, 0) = k_cl_l_gain;
+  k_cl(9, 9) = k_cl_r_gain;
+  adaptive_gain = 1 / 2;
 }
 
 void payload_orientation_cb(const sensor_msgs::Imu::ConstPtr &msg){
@@ -114,7 +122,7 @@ void reference_cb(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr 
   payload_reference_position(2) = reference_input.transforms[0].translation.z;
   payload_reference_linear_acceleration(0) = reference_input.accelerations[0].linear.x;
   payload_reference_linear_acceleration(1) = reference_input.accelerations[0].linear.y;
-  payload_reference_linear_acceleration(2) = reference_input.accelerations[0].linear.z + g;
+  payload_reference_linear_acceleration(2) = reference_input.accelerations[0].linear.z;
   payload_reference_angular_acceleration(0) = 0;
   payload_reference_angular_acceleration(1) = 0;
   // payload_reference_angular_acceleration(2) = 0;
@@ -132,7 +140,7 @@ void reference_cb(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr 
     static double w_last = 0;
     double bound = 10.0;
     payload_reference_angular_velocity(2) = K_p * angle_error;
-    payload_reference_angular_acceleration(2) = K_p * angle_error * 0.5;
+    payload_reference_angular_acceleration(2) = K_p * angle_error * 0.05;
     if(payload_reference_angular_acceleration(2) > bound){
       payload_reference_angular_acceleration(2) = bound;
     }else if(payload_reference_angular_acceleration(2) < -bound){
@@ -379,7 +387,7 @@ int main(int argc, char **argv)
 
     // compute o_i hat
 
-    Eigen::Matrix<double, 10, 1> o_i_hat_dot = -adaptive_gain * gamma_o * Y_o.transpose() * s - k_cl_gain * gamma_o * ICL_sum;
+    Eigen::Matrix<double, 10, 1> o_i_hat_dot = -adaptive_gain * gamma_o * Y_o.transpose() * s - k_cl * gamma_o * ICL_sum;
 
     // implement the adaptation law
     o_i_hat = o_i_hat + o_i_hat_dot * dt;
@@ -393,6 +401,7 @@ int main(int argc, char **argv)
     wrench = M_i_inverse * F_i;
 
 
+
     geometry_msgs::Wrench robot_cmd;
     if(isnan(wrench(0)) != 0){
       std::cout << "I meet something cool like wrench nan!!" << std::endl;
@@ -400,7 +409,7 @@ int main(int argc, char **argv)
     }else{
       robot_cmd.force.x = wrench(0);
       robot_cmd.force.y = wrench(1);
-      robot_cmd.force.z = 1.05 * 5 / 2 * g;
+      robot_cmd.force.z = wrench(2) + 1.13 * 5 / 2 * g;
       // robot_cmd.force.z = wrench(2);
       robot_cmd.torque.x = wrench(3);
       robot_cmd.torque.y = wrench(4);
@@ -412,8 +421,8 @@ int main(int argc, char **argv)
     // std::cout << "Ixx: " << o_i_hat(4) << std::endl << std::endl;
     // std::cout << "Iyy: " << o_i_hat(7) << std::endl << std::endl;
     std::cout << "Izz: " << o_i_hat(9) << std::endl << std::endl;
-    // std::cout << "angle error: " << angle_error << std::endl << std::endl;
-    std::cout << "alpha: " << payload_reference_angular_acceleration(2) << std::endl << std::endl;
+    // std::cout << "-k_cl * gamma_o * ICL_sum: " << -k_cl * gamma_o * ICL_sum << std::endl << std::endl;
+    // std::cout << "wrench: " << wrench << std::endl << std::endl;
     // std::cout << "ICL: " << ICL_sum << std::endl << std::endl;
     std::cout << "-------" << std::endl;
 

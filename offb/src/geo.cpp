@@ -69,7 +69,7 @@ int main(int argc, char **argv)
     p2.acc << 0,0,0;
     p2.yaw = 1;
 
-    p3.pos << 11.5,0,0.46;
+    p3.pos << 13.5,0,0.46;
     p3.vel << 0,0,0;
     p3.acc << 0,0,0;
     p3.yaw = 0;
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
     p5.acc << 0,0,0;
     p5.yaw = 0;
 
-    p6.pos << -10.5,0,0.46;
+    p6.pos << -12.5,0,0.46;
     p6.vel << 0,0,0;
     p6.acc << 0,0,0;
     p6.yaw = 0;

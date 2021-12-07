@@ -52,8 +52,10 @@ int main(int argc, char **argv)
     apply_wrench_req.wrench.force.y = robot_cmd.force.y;
     apply_wrench_req.wrench.force.z = robot_cmd.force.z;
 
-    apply_wrench_req.wrench.torque.z = robot_cmd.torque.z;
-    apply_wrench_req.wrench.torque.z = robot_cmd.torque.z;
+    apply_wrench_req.wrench.torque.x = robot_cmd.torque.x;
+    apply_wrench_req.wrench.torque.y = robot_cmd.torque.y;
+    // apply_wrench_req.wrench.torque.x = 0;
+    // apply_wrench_req.wrench.torque.y = 0;
     apply_wrench_req.wrench.torque.z = robot_cmd.torque.z;
 
   	call_service = wrenchClient.call(apply_wrench_req, apply_wrench_resp);
