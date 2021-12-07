@@ -61,7 +61,8 @@ void initialized_params(){
   lambda = 1.1;//0.5;
   double gamma_gain = 0.1;
   gamma_o = Eigen::Matrix<double, 10, 10>::Identity() * gamma_gain;
-  double Kdl_gain = 1.2;//1.5;
+  gamma_o(0, 0) = 0.4;
+  double Kdl_gain = 1.6;//1.5;
   double Kdr_gain = 3.8;//2.5;
   K_d = Eigen::Matrix<double, 6, 6>::Identity();
   K_d.topLeftCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdl_gain;
@@ -75,8 +76,8 @@ void initialized_params(){
   o_i_hat(9) = 0;//1.692708333 / 2 - 0.5;
   K_p = 2.5;
   N_o = 20;
-  k_cl_l_gain = 12.0;
-  k_cl_r_gain = 8.0;//36.0;
+  k_cl_l_gain = 3.0;
+  k_cl_r_gain = 8.0;
   k_cl = Eigen::Matrix<double, 10, 10>::Identity();
   k_cl.topLeftCorner(4, 4) = Eigen::Matrix<double, 4, 4>::Zero();
   k_cl.bottomRightCorner(6, 6) = Eigen::Matrix<double, 6, 6>::Zero();
