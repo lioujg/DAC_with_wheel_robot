@@ -259,6 +259,8 @@ int main(int argc, char **argv)
   // ros::Publisher estimated_m_pub = nh.advertise<geometry_msgs::Point>("/estimated/mass",4);
   // ros::Publisher estimated_I_pub = nh.advertise<geometry_msgs::Inertia>("/estimated/inertia",4);
   ros::Publisher estimated_pub = nh.advertise<geometry_msgs::Inertia>("/estimated",4);
+  ros::Publisher pos_err_pub = nh.advertise<geometry_msgs::Pose2D>("/position_error",4);
+  ros::Publisher s_norm_pub = nh.advertise<geometry_msgs::Point>("/s_norm",4);
 
   ros::Rate loop_rate(control_rate);
   initialized_params();
@@ -432,10 +434,10 @@ int main(int argc, char **argv)
 
     // plot output
     // pose error
-    geometry_msgs::Pose2D position_error;
-    position_error.x = position_error(0);
-    position_error.y = position_error(1);
-    position_error.theta = angle_error;
+    geometry_msgs::Pose2D pos_error;
+    pos_error.x = position_error(0);
+    pos_error.y = position_error(1);
+    pos_error.theta = angle_error;
 
     // velocity error s
     geometry_msgs::Point s_norm;
@@ -444,8 +446,6 @@ int main(int argc, char **argv)
       s_n += s(i) * s(i);
     }
     s_norm.x = s_n;
-
-
 
 
     past = now;
@@ -465,6 +465,8 @@ int main(int argc, char **argv)
   	robot_controller_pub.publish(robot_cmd);
     // estimated_m_pub.publish(mass);
     estimated_pub.publish(inertia);
+    pos_err_pub.publish(pos_error);
+    s_norm_pub.publish(s_norm);
     loop_rate.sleep();
     ros::spinOnce();
   }
