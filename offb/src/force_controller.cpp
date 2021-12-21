@@ -436,7 +436,14 @@ int main(int argc, char **argv)
     position_error.x = position_error(0);
     position_error.y = position_error(1);
     position_error.theta = angle_error;
+
     // velocity error s
+    geometry_msgs::Point s_norm;
+    double s_n = 0;
+    for(int i=0;i<s.size();i++){
+      s_n += s(i) * s(i);
+    }
+    s_norm.x = s_n;
 
 
 
