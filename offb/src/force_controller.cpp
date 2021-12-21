@@ -8,6 +8,8 @@
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/WrenchStamped.h>
+#include <geometry_msgs/Pose2D.h>
+#include <geometry_msgs/Inertia.h>
 #include <tf/transform_datatypes.h>
 #include <cmath>
 #include <iostream>
@@ -79,8 +81,8 @@ void initialized_params(){
   k_cl_l_gain = 3.0;
   k_cl_r_gain = 8.0;
   k_cl = Eigen::Matrix<double, 10, 10>::Identity();
-  k_cl.topLeftCorner(4, 4) = Eigen::Matrix<double, 4, 4>::Zero();
-  k_cl.bottomRightCorner(6, 6) = Eigen::Matrix<double, 6, 6>::Zero();
+  // k_cl.topLeftCorner(4, 4) = Eigen::Matrix<double, 4, 4>::Zero();
+  // k_cl.bottomRightCorner(6, 6) = Eigen::Matrix<double, 6, 6>::Zero();
   k_cl(0, 0) = k_cl_l_gain;
   k_cl(9, 9) = k_cl_r_gain;
   adaptive_gain = 1 / 2;
@@ -254,8 +256,9 @@ int main(int argc, char **argv)
   ros::Subscriber payload_ft_sub = nh.subscribe<geometry_msgs::WrenchStamped>("/payload_ft_sensor",4,payload_ft_sensor_cb);
 
   ros::Publisher robot_controller_pub = nh.advertise<geometry_msgs::Wrench>("robot_wrench",4);
-  ros::Publisher estimated_m_pub = nh.advertise<geometry_msgs::Point>("/estimated/mass",4);
-  ros::Publisher estimated_I_pub = nh.advertise<geometry_msgs::Point>("/estimated/inertia",4);
+  // ros::Publisher estimated_m_pub = nh.advertise<geometry_msgs::Point>("/estimated/mass",4);
+  // ros::Publisher estimated_I_pub = nh.advertise<geometry_msgs::Inertia>("/estimated/inertia",4);
+  ros::Publisher estimated_pub = nh.advertise<geometry_msgs::Inertia>("/estimated",4);
 
   ros::Rate loop_rate(control_rate);
   initialized_params();
@@ -387,7 +390,6 @@ int main(int argc, char **argv)
 
 
     // compute o_i hat
-
     Eigen::Matrix<double, 10, 1> o_i_hat_dot = -adaptive_gain * gamma_o * Y_o.transpose() * s - k_cl * gamma_o * ICL_sum;
 
     // implement the adaptation law
@@ -417,6 +419,7 @@ int main(int argc, char **argv)
       robot_cmd.torque.z = wrench(5);
     }
 
+    // debug output
     std::cout << "-------" << std::endl;
     std::cout << "m: " << o_i_hat(0) << std::endl << std::endl;
     // std::cout << "Ixx: " << o_i_hat(4) << std::endl << std::endl;
@@ -427,19 +430,34 @@ int main(int argc, char **argv)
     // std::cout << "ICL: " << ICL_sum << std::endl << std::endl;
     std::cout << "-------" << std::endl;
 
+    // plot output
+    // pose error
+    geometry_msgs::Pose2D position_error;
+    position_error.x = position_error(0);
+    position_error.y = position_error(1);
+    position_error.theta = angle_error;
+    // velocity error s
+
+
+
+
     past = now;
     dt = 1 / control_rate;
 
-    geometry_msgs::Point mass;
-    geometry_msgs::Point inertia;
-    mass.x = o_i_hat(0);
-    inertia.x = o_i_hat(4);
-    inertia.y = o_i_hat(7);
-    inertia.z = o_i_hat(9);
+    // geometry_msgs::Point mass;
+    geometry_msgs::Inertia inertia;
+    // mass.x = o_i_hat(0);
+    inertia.m = o_i_hat(0);
+    inertia.ixx = o_i_hat(4);
+    inertia.ixy = o_i_hat(5);
+    inertia.ixz = o_i_hat(6);
+    inertia.iyy = o_i_hat(7);
+    inertia.iyz = o_i_hat(8);
+    inertia.izz = o_i_hat(9);
 
   	robot_controller_pub.publish(robot_cmd);
-    estimated_m_pub.publish(mass);
-    estimated_I_pub.publish(inertia);
+    // estimated_m_pub.publish(mass);
+    estimated_pub.publish(inertia);
     loop_rate.sleep();
     ros::spinOnce();
   }
