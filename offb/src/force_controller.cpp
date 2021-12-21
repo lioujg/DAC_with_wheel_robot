@@ -85,7 +85,7 @@ void initialized_params(){
   // k_cl.bottomRightCorner(6, 6) = Eigen::Matrix<double, 6, 6>::Zero();
   k_cl(0, 0) = k_cl_l_gain;
   k_cl(9, 9) = k_cl_r_gain;
-  adaptive_gain = 1 / 2;
+  adaptive_gain = 1.0 / 2.0;
 }
 
 void payload_orientation_cb(const sensor_msgs::Imu::ConstPtr &msg){
@@ -393,6 +393,7 @@ int main(int argc, char **argv)
 
     // compute o_i hat
     Eigen::Matrix<double, 10, 1> o_i_hat_dot = -adaptive_gain * gamma_o * Y_o.transpose() * s - k_cl * gamma_o * ICL_sum;
+    // Eigen::Matrix<double, 10, 1> o_i_hat_dot = -adaptive_gain * gamma_o * Y_o.transpose() * s;
 
     // implement the adaptation law
     o_i_hat = o_i_hat + o_i_hat_dot * dt;
@@ -430,6 +431,7 @@ int main(int argc, char **argv)
     // std::cout << "-k_cl * gamma_o * ICL_sum: " << -k_cl * gamma_o * ICL_sum << std::endl << std::endl;
     // std::cout << "wrench: " << wrench << std::endl << std::endl;
     // std::cout << "ICL: " << ICL_sum << std::endl << std::endl;
+    std::cout << "o_i_hat_dot: " << adaptive_gain << std::endl << std::endl;
     std::cout << "-------" << std::endl;
 
     // plot output
