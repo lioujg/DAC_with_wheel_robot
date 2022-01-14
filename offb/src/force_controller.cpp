@@ -44,6 +44,7 @@ double g = 9.81;
 double control_rate = 20;
 double angle_error;
 bool rotation = true;
+bool ICL_update = true;
 
 // gain
 double lambda;
@@ -76,7 +77,7 @@ void initialized_params(){
   o_i_hat(4) = 0.052083333 / 2;
   o_i_hat(7) = 1.692708333 / 2;
   o_i_hat(9) = 0;//1.692708333 / 2 - 0.5;
-  K_p = 2.5;
+  K_p = 2.57;//2.5;
   N_o = 20;
   k_cl_l_gain = 3.0;
   k_cl_r_gain = 8.0;
@@ -123,9 +124,13 @@ void reference_cb(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr 
   payload_reference_position(0) = reference_input.transforms[0].translation.x;
   payload_reference_position(1) = reference_input.transforms[0].translation.y;
   payload_reference_position(2) = reference_input.transforms[0].translation.z;
-  payload_reference_linear_acceleration(0) = reference_input.accelerations[0].linear.x;
-  payload_reference_linear_acceleration(1) = reference_input.accelerations[0].linear.y;
-  payload_reference_linear_acceleration(2) = reference_input.accelerations[0].linear.z;
+
+
+  float lpf_gain = 0.4;
+  payload_reference_linear_acceleration(0) = reference_input.accelerations[0].linear.x * lpf_gain + payload_reference_linear_acceleration(0) * (1-lpf_gain);
+  payload_reference_linear_acceleration(1) = reference_input.accelerations[0].linear.y * lpf_gain + payload_reference_linear_acceleration(1) * (1-lpf_gain);
+  payload_reference_linear_acceleration(2) = reference_input.accelerations[0].linear.z * lpf_gain + payload_reference_linear_acceleration(2) * (1-lpf_gain);
+
   payload_reference_angular_acceleration(0) = 0;
   payload_reference_angular_acceleration(1) = 0;
   // payload_reference_angular_acceleration(2) = 0;
@@ -392,8 +397,12 @@ int main(int argc, char **argv)
 
 
     // compute o_i hat
-    Eigen::Matrix<double, 10, 1> o_i_hat_dot = -adaptive_gain * gamma_o * Y_o.transpose() * s - k_cl * gamma_o * ICL_sum;
-    // Eigen::Matrix<double, 10, 1> o_i_hat_dot = -adaptive_gain * gamma_o * Y_o.transpose() * s;
+    Eigen::Matrix<double, 10, 1> o_i_hat_dot = Eigen::MatrixXd::Zero(10, 1);
+    if(ICL_update == true){
+      o_i_hat_dot = -adaptive_gain * gamma_o * Y_o.transpose() * s - k_cl * gamma_o * ICL_sum;
+    }else{
+      o_i_hat_dot = -adaptive_gain * gamma_o * Y_o.transpose() * s;
+    }
 
     // implement the adaptation law
     o_i_hat = o_i_hat + o_i_hat_dot * dt;
@@ -415,7 +424,7 @@ int main(int argc, char **argv)
     }else{
       robot_cmd.force.x = wrench(0);
       robot_cmd.force.y = wrench(1);
-      robot_cmd.force.z = wrench(2) + 1.13 * 5 / 2 * g;
+      robot_cmd.force.z = wrench(2) + 1.0 * 5 / 2 * g;
       // robot_cmd.force.z = wrench(2);
       robot_cmd.torque.x = wrench(3);
       robot_cmd.torque.y = wrench(4);
@@ -448,7 +457,11 @@ int main(int argc, char **argv)
       s_n += s(i) * s(i);
     }
     s_norm.x = s_n;
-
+    if(s_n < 0.02){
+      ICL_update = false;
+    }else{
+      ICL_update = true;
+    }
 
     past = now;
     dt = 1 / control_rate;
