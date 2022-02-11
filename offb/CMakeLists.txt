@@ -207,6 +207,7 @@ add_executable(obstacle src/obstacle.cpp)
 add_executable(geo2_new src/geo2_new.cpp)
 add_executable(force_control_client src/force_control_client.cpp)
 add_executable(force_controller src/force_controller.cpp)
+add_executable(force_controller_arm src/force_controller_arm.cpp)
 #add_executable(force src/force.cpp)
 #add_executable(coop1 src/coop1.cpp)
 
@@ -308,6 +309,10 @@ target_link_libraries(
 )
 target_link_libraries(
     force_controller
+     ${catkin_LIBRARIES}
+)
+target_link_libraries(
+    force_controller_arm
      ${catkin_LIBRARIES}
 )
 
