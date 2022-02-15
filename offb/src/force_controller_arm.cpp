@@ -17,6 +17,10 @@
 #include <numeric>
 #include <algorithm>
 
+# define USE_FORCE_SENSOR 0
+# define USE_COMMAND_FORCE 1
+# define FORCE_INPUT_SWITCHER USE_COMMAND_FORCE
+
 // pose
 Eigen::Matrix3d R;
 Eigen::Matrix3d R_d;
@@ -54,7 +58,6 @@ double lambda;
 Eigen::Matrix<double, 13, 13> gamma_o;
 Eigen::Matrix<double, 6, 6> K_d;
 double K_p; // heading angle
-double k_cl_l_gain, k_cl_r_gain;
 Eigen::Matrix<double, 13, 13> k_cl;
 double N_o;
 double adaptive_gain;
@@ -65,31 +68,39 @@ void initialized_params(){
          0, 1, 0,
          0, 0, 1;
   lambda = 1.1;
-  double gamma_gain = 0.1, gamma_arm = 0.1;
+
+  double gamma_gain = 0.1, gamma_mass = 0.4, gamma_arm = 0.1; //0.6
   gamma_o = Eigen::Matrix<double, 13, 13>::Identity() * gamma_gain;
-  gamma_o(0, 0) = 0.4;
+  gamma_o(0, 0) = gamma_mass;
   gamma_o.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * gamma_arm;
-  double Kdl_gain = 12;//1.5;
-  double Kdr_gain = 3;//2.5;
+
+  double Kdl_gain = 12;//12;
+  double Kdr_gain = 5;//2.5;
   K_d = Eigen::Matrix<double, 6, 6>::Identity();
   K_d.topLeftCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdl_gain;
   K_d.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdr_gain;
   // K_d.bottomRightCorner(1, 1) = Eigen::Matrix<double, 1, 1>::Identity() * Kdr_gain;
 
   o_i_hat = Eigen::MatrixXd::Zero(13, 1);
-  o_i_hat(0) = 8.0 / 3.0;
-  o_i_hat(4) = 0.8416666 / 3.0;
-  o_i_hat(7) = 4.8416666 / 3.0;
-  o_i_hat(9) = 6.8333333 / 3.0;
-  K_p = 3;//2.5;
+  o_i_hat(0) = 8.0 / 3.0; // mass
+  o_i_hat(4) = 0.8416666 / 3.0; // Ixx
+  o_i_hat(7) = 4.8416666 / 3.0; // Iyy
+  o_i_hat(9) = 6.8333333 / 3.0; // Izz
+  o_i_hat(10) = r_i(0); //r_ix
+  o_i_hat(11) = r_i(1); //r_iy
+  o_i_hat(12) = r_i(2); //r_iz
+
+  K_p = 1.5;//2.5;
   N_o = 10;
-  k_cl_l_gain = 0.1;
-  k_cl_r_gain = 15;
-  k_cl = Eigen::Matrix<double, 13, 13>::Identity() * k_cl_r_gain;
-  // k_cl.topLeftCorner(4, 4) = Eigen::Matrix<double, 4, 4>::Zero();
-  // k_cl.bottomRightCorner(6, 6) = Eigen::Matrix<double, 6, 6>::Zero();
-  k_cl(0, 0) = k_cl_l_gain;
-  // k_cl(9, 9) = k_cl_r_gain;
+
+  double k_cl_gain, k_cl_arm_gain, k_cl_mass;
+  k_cl_mass = 0.1;
+  k_cl_gain = 0.1;
+  k_cl_arm_gain = 0.1;
+  k_cl = Eigen::Matrix<double, 13, 13>::Identity() * k_cl_gain;
+  k_cl(0, 0) = k_cl_mass;
+  k_cl.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * k_cl_arm_gain;
+  // k_cl(9, 9) = k_cl_gain;
   adaptive_gain = 1.0 / 2.0;
 }
 
@@ -105,7 +116,7 @@ void payload_orientation_cb(const sensor_msgs::Imu::ConstPtr &msg){
     q.w() = payload_imu.orientation.w;
 
     R = q.normalized().toRotationMatrix();
-    float lpf_gain = 0.4;
+    float lpf_gain = 0.2;
 
     payload_angular_velocity(0) = payload_imu.angular_velocity.x * lpf_gain + payload_angular_velocity(0) * (1-lpf_gain);
     payload_angular_velocity(1) = payload_imu.angular_velocity.y * lpf_gain + payload_angular_velocity(1) * (1-lpf_gain);
@@ -131,9 +142,10 @@ void reference_cb(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr 
   payload_reference_position(1) = reference_input.transforms[0].translation.y;
   payload_reference_position(2) = reference_input.transforms[0].translation.z;
 
-  payload_reference_linear_acceleration(0) = reference_input.accelerations[0].linear.x;
-  payload_reference_linear_acceleration(1) = reference_input.accelerations[0].linear.y;
-  payload_reference_linear_acceleration(2) = reference_input.accelerations[0].linear.z;
+  float lpf_gain = 0.8;
+  payload_reference_linear_acceleration(0) = reference_input.accelerations[0].linear.x * lpf_gain + payload_reference_linear_acceleration(0) * (1-lpf_gain);
+  payload_reference_linear_acceleration(1) = reference_input.accelerations[0].linear.y * lpf_gain + payload_reference_linear_acceleration(1) * (1-lpf_gain);
+  payload_reference_linear_acceleration(2) = reference_input.accelerations[0].linear.z * lpf_gain + payload_reference_linear_acceleration(2) * (1-lpf_gain);
 
   payload_reference_angular_acceleration(0) = 0;
   payload_reference_angular_acceleration(1) = 0;
@@ -168,12 +180,14 @@ void reference_cb(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr 
 void payload_odom_cb(const nav_msgs::Odometry::ConstPtr &msg){
   nav_msgs::Odometry payload_odom;
   payload_odom = *msg;
+
   if(isnan(payload_odom.twist.twist.linear.x) != 0){
     std::cout << "I meet something cool like odom nan!!" << std::endl;
   }else{
-    payload_linear_velocity(0) = payload_odom.twist.twist.linear.x;
-    payload_linear_velocity(1) = payload_odom.twist.twist.linear.y;
-    payload_linear_velocity(2) = payload_odom.twist.twist.linear.z;
+    float lpf_gain = 1.0;
+    payload_linear_velocity(0) = payload_odom.twist.twist.linear.x * lpf_gain + payload_linear_velocity(0) * (1-lpf_gain);
+    payload_linear_velocity(1) = payload_odom.twist.twist.linear.y * lpf_gain + payload_linear_velocity(0) * (1-lpf_gain);
+    payload_linear_velocity(2) = payload_odom.twist.twist.linear.z * lpf_gain + payload_linear_velocity(0) * (1-lpf_gain);
   }
   payload_position(0) = payload_odom.pose.pose.position.x;
   payload_position(1) = payload_odom.pose.pose.position.y;
@@ -183,12 +197,13 @@ void payload_odom_cb(const nav_msgs::Odometry::ConstPtr &msg){
 void payload_ft_sensor_cb(const geometry_msgs::WrenchStamped::ConstPtr &msg){
   geometry_msgs::WrenchStamped payload_ft;
   payload_ft = *msg;
-  true_tau << payload_ft.wrench.force.x,
-              payload_ft.wrench.force.y,
-              payload_ft.wrench.force.z,
-              payload_ft.wrench.torque.x,
-              payload_ft.wrench.torque.y,
-              payload_ft.wrench.torque.z;
+  float lpf_gain = 0.6;
+  true_tau << payload_ft.wrench.force.x * lpf_gain + true_tau(0) * (1-lpf_gain),
+              payload_ft.wrench.force.y * lpf_gain + true_tau(1) * (1-lpf_gain),
+              payload_ft.wrench.force.z * lpf_gain + true_tau(2) * (1-lpf_gain),
+              payload_ft.wrench.torque.x * lpf_gain + true_tau(3) * (1-lpf_gain),
+              payload_ft.wrench.torque.y * lpf_gain + true_tau(4) * (1-lpf_gain),
+              payload_ft.wrench.torque.z * lpf_gain + true_tau(5) * (1-lpf_gain);
 }
 
 Eigen::Vector3d vee_map(Eigen::Matrix3d Matrix){
@@ -254,6 +269,13 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "force_controller");
   ros::NodeHandle nh;
 
+  // get r_i for initial guess
+  if(nh.getParam("r_i_x", r_i(0)) && nh.getParam("r_i_y", r_i(1)) && nh.getParam("r_i_z", r_i(2))){
+    ROS_INFO("Received r_i info.");
+  }else{
+    ROS_WARN("Can't get r_i!");
+  }
+
 
   ros::Subscriber payload_imu_sub = nh.subscribe<sensor_msgs::Imu>("/payload/IMU",4,payload_orientation_cb);
   ros::Subscriber reference_input_sub = nh.subscribe<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/payload/desired_trajectory",4,reference_cb);
@@ -265,6 +287,7 @@ int main(int argc, char **argv)
   // ros::Publisher estimated_I_pub = nh.advertise<geometry_msgs::Inertia>("/estimated/inertia",4);
   ros::Publisher estimated_pub = nh.advertise<geometry_msgs::Inertia>("/estimated",4);
   ros::Publisher pos_err_pub = nh.advertise<geometry_msgs::Pose2D>("/position_error",4);
+  ros::Publisher arm_err_pub = nh.advertise<geometry_msgs::Point>("/arm_est_error",4);
   ros::Publisher s_norm_pub = nh.advertise<geometry_msgs::Point>("/s_norm",4);
 
   ros::Rate loop_rate(control_rate);
@@ -313,7 +336,11 @@ int main(int argc, char **argv)
     Eigen::Vector3d w_r = payload_reference_angular_velocity - lambda * R_d * Pa_Re_V;
     Eigen::Vector3d pre_f_i;
     static Eigen::Matrix<double, 6, 1> wrench = Eigen::MatrixXd::Zero(6, 1);
+#if (FORCE_INPUT_SWITCHER == USE_COMMAND_FORCE)
     pre_f_i << wrench(0), wrench(1), wrench(2);
+#elif (FORCE_INPUT_SWITCHER == USE_FORCE_SENSOR)
+    pre_f_i << true_tau(0), true_tau(1), true_tau(2);
+#endif
 
     Eigen::Matrix<double, 3, 13> Y_l;
     Eigen::Matrix<double, 3, 13> Y_r;
@@ -365,9 +392,10 @@ int main(int argc, char **argv)
     y_o_cl_integral.block<3, 13>(3, 0) = y_r;
 
     // compute true tau and integral
-#if 1
+#if (FORCE_INPUT_SWITCHER == USE_COMMAND_FORCE)
     Eigen::Matrix<double, 6, 1> true_tau_integral = wrench * dt;
-#else
+#elif (FORCE_INPUT_SWITCHER == USE_FORCE_SENSOR)
+#pragma message("Force Sensor!")
     Eigen::Matrix<double, 6, 1> true_tau_integral = true_tau * dt;
 #endif
 
@@ -441,17 +469,19 @@ int main(int argc, char **argv)
     // std::cout << "r_px: " << o_i_hat(1) / o_i_hat(0) << std::endl << std::endl;
     // std::cout << "r_py: " << o_i_hat(2) / o_i_hat(0) << std::endl << std::endl;
     // std::cout << "r_pz: " << o_i_hat(3) / o_i_hat(0) << std::endl << std::endl;
-    std::cout << "r_ix: " << o_i_hat(10) << std::endl << std::endl;
-    std::cout << "r_iy: " << o_i_hat(11) << std::endl << std::endl;
-    std::cout << "r_iz: " << o_i_hat(12) << std::endl << std::endl;
+    std::cout << "r_i: " << o_i_hat(10) << "  " <<o_i_hat(11) << "  "  << o_i_hat(12) <<std::endl;
+    std::cout << "ri ground truth: " << std::endl << r_i << std::endl << std::endl;
     std::cout << "-------" << std::endl;
 
     // plot output
     // pose error
     geometry_msgs::Pose2D pos_error;
-    pos_error.x = position_error(0);
-    pos_error.y = position_error(1);
-    pos_error.theta = angle_error;
+    // pos_error.x = position_error(0);
+    // pos_error.y = position_error(1);
+    // pos_error.theta = angle_error;
+    pos_error.x = true_tau(0);
+    pos_error.y = true_tau(1);
+    pos_error.theta = true_tau(2);
 
     // velocity error s
     geometry_msgs::Point s_norm;
@@ -460,7 +490,7 @@ int main(int argc, char **argv)
       s_n += s(i) * s(i);
     }
     s_norm.x = s_n;
-    if(s_n < 0.02){
+    if(s_n < -1){
       ICL_update = false;
     }else{
       ICL_update = true;
@@ -476,6 +506,12 @@ int main(int argc, char **argv)
       s_n += s(i) * s(i);
     }
     s_norm.z = s_n; //r
+
+    // arm estimated error
+    geometry_msgs::Point arm_error;
+    arm_error.x = o_i_hat(10) - r_i(0);
+    arm_error.y = o_i_hat(11) - r_i(1);
+    arm_error.z = sqrt(arm_error.x * arm_error.x) + (arm_error.y * arm_error.y);
 
     dt = 1 / control_rate;
 
@@ -494,6 +530,7 @@ int main(int argc, char **argv)
     // estimated_m_pub.publish(mass);
     estimated_pub.publish(inertia);
     pos_err_pub.publish(pos_error);
+    arm_err_pub.publish(arm_error);
     s_norm_pub.publish(s_norm);
     loop_rate.sleep();
     ros::spinOnce();

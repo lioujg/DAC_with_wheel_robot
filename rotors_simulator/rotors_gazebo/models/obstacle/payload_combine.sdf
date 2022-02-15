@@ -404,6 +404,12 @@
       <topicName>/payload_joint_2_ft_sensor</topicName>
       <jointName>payload_joint_2</jointName>
     </plugin>
+    <plugin name="ft_sensor" filename="libgazebo_ros_ft_sensor.so">
+      <always_on>true</always_on>
+      <updateRate>200.0</updateRate>
+      <topicName>/payload_joint_3_ft_sensor</topicName>
+      <jointName>payload_joint_3</jointName>
+    </plugin>
 
   </model>
 </sdf>
