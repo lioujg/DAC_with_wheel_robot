@@ -87,6 +87,30 @@
     </model>
 
     <model name='uneven'>
+      <pose frame=''>0 0 0 0 0 0</pose>
+      <static>1</static>
+      <link name='uneven'>
+        <visual name='uneven_visual'>
+          <geometry>
+            <mesh>
+              <uri>model://uneven/meshes/uneven.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <collision name="uneven_collision">
+            <geometry>
+                <mesh>
+                    <uri>model://uneven/meshes/uneven.dae</uri>
+                </mesh>
+            </geometry>
+        </collision>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+    </model>-->
+
+    <!--<model name='uneven'>
       <pose frame=''>0 0 -0.1 0 0 0</pose>
       <static>1</static>
       <link name='uneven'>

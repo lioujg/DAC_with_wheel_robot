@@ -19,7 +19,7 @@
 
 # define USE_FORCE_SENSOR 0
 # define USE_COMMAND_FORCE 1
-# define FORCE_INPUT_SWITCHER USE_COMMAND_FORCE
+# define FORCE_INPUT_SWITCHER USE_FORCE_SENSOR
 
 // pose
 Eigen::Matrix3d R;
@@ -44,7 +44,7 @@ Eigen::Vector3d desired_angle;
 Eigen::Matrix<double, 13, 1> o_i_hat;
 std::queue<Eigen::Matrix<double, 13, 1>> ICL_queue;
 bool pop_on = false;
-double g = 0;
+double g = 0;//9.81;
 Eigen::Vector3d G;
 double control_rate = 20;
 Eigen::Vector3d angle_error;
@@ -71,13 +71,13 @@ void initialized_params(){
   lambda = 1.1;
   G << 0, 0, -g;
 
-  double gamma_gain = 0.1, gamma_mass = 0.8, gamma_arm = 0.1; //0.6
+  double gamma_gain = 0.1, gamma_mass = 0.5, gamma_arm = 0.1; //0.6
   gamma_o = Eigen::Matrix<double, 13, 13>::Identity() * gamma_gain;
   gamma_o(0, 0) = gamma_mass;
   gamma_o.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * gamma_arm;
 
   double Kdl_gain = 10;//12;
-  double Kdr_gain = 5;//2.5;
+  double Kdr_gain = 7;//2.5;
   K_d = Eigen::Matrix<double, 6, 6>::Identity();
   K_d.topLeftCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdl_gain;
   K_d.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdr_gain;
@@ -98,10 +98,10 @@ void initialized_params(){
   // o_i_hat(12) = 0; //r_iz
 
   K_p << 0, 0, 1.5;//2.5;
-  N_o = 30;
+  N_o = 10;
 
   double k_cl_gain, k_cl_arm_gain, k_cl_mass;
-  k_cl_mass = 0.3;
+  k_cl_mass = 0.04;
   k_cl_gain = 0.1;
   k_cl_arm_gain = 0.1;
   k_cl = Eigen::Matrix<double, 13, 13>::Identity() * k_cl_gain;
@@ -212,7 +212,7 @@ void payload_odom_cb(const nav_msgs::Odometry::ConstPtr &msg){
 void payload_ft_sensor_cb(const geometry_msgs::WrenchStamped::ConstPtr &msg){
   geometry_msgs::WrenchStamped payload_ft;
   payload_ft = *msg;
-  float lpf_gain = 0.6;
+  float lpf_gain = 0.4;
   true_tau << payload_ft.wrench.force.x * lpf_gain + true_tau(0) * (1-lpf_gain),
               payload_ft.wrench.force.y * lpf_gain + true_tau(1) * (1-lpf_gain),
               payload_ft.wrench.force.z * lpf_gain + true_tau(2) * (1-lpf_gain),
@@ -314,7 +314,7 @@ int main(int argc, char **argv)
     if(rotation == true){
       R_d <<  cos(-desired_angle(2)), sin(-desired_angle(2)), 0,
              -sin(-desired_angle(2)), cos(-desired_angle(2)), 0,
-                              0,                 0, 1;
+                                   0,                      0, 1;
     }
 
 
@@ -465,7 +465,7 @@ int main(int argc, char **argv)
     }else{
       robot_cmd.force.x = wrench(0);
       robot_cmd.force.y = wrench(1);
-      robot_cmd.force.z = wrench(2) + 0.9 * 8.0 / 3.0 * 9.81;
+      robot_cmd.force.z = wrench(2) + 0.8 * 8.0 / 3.0 * 9.81;
       // robot_cmd.force.z = 0.65 * true_tau(2);
       robot_cmd.torque.x = wrench(3);
       robot_cmd.torque.y = wrench(4);
