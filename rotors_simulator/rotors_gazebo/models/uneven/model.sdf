@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <model name="uneven">
+    <pose>0 0 0.75  0 0 0</pose>
+    <static>true</static>
+    <link name="link">
+      <visual name="visual">
+         <geometry>
+          <mesh>
+            <uri>model://uneven/meshes/uneven2.dae</uri>
+          </mesh>
+	       </geometry>
+      </visual>
+    </link>
+  </model>
+</sdf>

@@ -26,7 +26,7 @@
       <ode>
         <solver>
           <type>quick</type>
-          <iters>100</iters>
+          <iters>300</iters>
           <sor>1.3</sor>
         <use_dynamic_moi_rescaling>0</use_dynamic_moi_rescaling>
         </solver>
@@ -46,19 +46,19 @@
 
     <!--<model name="slope_1">
       <static>true</static>
-      <pose>0 0 0.0 0 0.03 0</pose>
+      <pose>0 0 0.0 0 0.08 0</pose>
       <link name="link">
         <collision name="collision">
           <geometry>
             <box>
-              <size>40 30 .1</size>
+              <size>80 60 .1</size>
             </box>
           </geometry>
         </collision>
         <visual name="visual">
           <geometry>
             <box>
-              <size>40 30 .1</size>
+              <size>80 60 .1</size>
             </box>
           </geometry>
         </visual>
@@ -67,25 +67,48 @@
 
     <model name="slope_2">
       <static>true</static>
-      <pose>0 0 0.0 0 -0.03 0</pose>
+      <pose>0 0 0.0 0 -0.08 0</pose>
       <link name="link">
         <collision name="collision">
           <geometry>
             <box>
-              <size>40 30 .1</size>
+              <size>80 60 .1</size>
             </box>
           </geometry>
         </collision>
         <visual name="visual">
           <geometry>
             <box>
-              <size>40 30 .1</size>
+              <size>80 60 .1</size>
             </box>
           </geometry>
         </visual>
       </link>
-    </model>-->
+    </model>
 
+    <model name='uneven'>
+      <pose frame=''>0 0 -0.1 0 0 0</pose>
+      <static>1</static>
+      <link name='uneven'>
+        <visual name='uneven_visual'>
+          <geometry>
+            <mesh>
+              <uri>model://uneven/meshes/uneven2.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <collision name="uneven_collision">
+            <geometry>
+                <mesh>
+                    <uri>model://uneven/meshes/uneven2.dae</uri>
+                </mesh>
+            </geometry>
+        </collision>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+    </model>-->
 
   </world>
 </sdf>

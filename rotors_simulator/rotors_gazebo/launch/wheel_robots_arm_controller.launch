@@ -54,8 +54,8 @@
         <node name="force_control_client" pkg="offb" type="force_control_client" output="screen">
             <remap from="robot_wrench" to="robot_3_wrench" />
         </node>
-        <param name = "r_i_x" type = "double" value = "0.55" />
-        <param name = "r_i_y" type = "double" value = "0.45" />
+        <param name = "r_i_x" type = "double" value = "1.55" />
+        <param name = "r_i_y" type = "double" value = "1.45" />
         <param name = "r_i_z" type = "double" value = "0" />
         <node name="force_controller_arm" pkg="offb" type="force_controller_arm" output="screen">
             <remap from="robot_wrench" to="robot_3_wrench" />

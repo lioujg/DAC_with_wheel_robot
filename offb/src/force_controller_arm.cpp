@@ -39,14 +39,15 @@ Eigen::Vector3d payload_reference_angular_velocity;
 Eigen::Vector3d payload_reference_position;
 Eigen::Vector3d payload_reference_linear_acceleration;
 Eigen::Vector3d payload_reference_angular_acceleration;
-double desired_yaw;
+Eigen::Vector3d desired_angle;
 
 Eigen::Matrix<double, 13, 1> o_i_hat;
 std::queue<Eigen::Matrix<double, 13, 1>> ICL_queue;
 bool pop_on = false;
-double g = 9.81;
+double g = 0;
+Eigen::Vector3d G;
 double control_rate = 20;
-double angle_error;
+Eigen::Vector3d angle_error;
 bool ICL_update = true;
 
 // option
@@ -57,7 +58,7 @@ bool ICL_update_switcher = true;
 double lambda;
 Eigen::Matrix<double, 13, 13> gamma_o;
 Eigen::Matrix<double, 6, 6> K_d;
-double K_p; // heading angle
+Eigen::Vector3d K_p; // heading angle
 Eigen::Matrix<double, 13, 13> k_cl;
 double N_o;
 double adaptive_gain;
@@ -68,13 +69,14 @@ void initialized_params(){
          0, 1, 0,
          0, 0, 1;
   lambda = 1.1;
+  G << 0, 0, -g;
 
-  double gamma_gain = 0.1, gamma_mass = 0.4, gamma_arm = 0.1; //0.6
+  double gamma_gain = 0.1, gamma_mass = 0.8, gamma_arm = 0.1; //0.6
   gamma_o = Eigen::Matrix<double, 13, 13>::Identity() * gamma_gain;
   gamma_o(0, 0) = gamma_mass;
   gamma_o.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * gamma_arm;
 
-  double Kdl_gain = 12;//12;
+  double Kdl_gain = 10;//12;
   double Kdr_gain = 5;//2.5;
   K_d = Eigen::Matrix<double, 6, 6>::Identity();
   K_d.topLeftCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdl_gain;
@@ -82,19 +84,24 @@ void initialized_params(){
   // K_d.bottomRightCorner(1, 1) = Eigen::Matrix<double, 1, 1>::Identity() * Kdr_gain;
 
   o_i_hat = Eigen::MatrixXd::Zero(13, 1);
-  o_i_hat(0) = 8.0 / 3.0; // mass
+  o_i_hat(0) = 2.0; // mass
+  o_i_hat(1) = o_i_hat(0) * (-0.666666);
+  o_i_hat(2) = o_i_hat(0) * (-0.666666);
   o_i_hat(4) = 0.8416666 / 3.0; // Ixx
   o_i_hat(7) = 4.8416666 / 3.0; // Iyy
   o_i_hat(9) = 6.8333333 / 3.0; // Izz
   o_i_hat(10) = r_i(0); //r_ix
   o_i_hat(11) = r_i(1); //r_iy
   o_i_hat(12) = r_i(2); //r_iz
+  // o_i_hat(10) = 0; //r_ix
+  // o_i_hat(11) = 0; //r_iy
+  // o_i_hat(12) = 0; //r_iz
 
-  K_p = 1.5;//2.5;
-  N_o = 10;
+  K_p << 0, 0, 1.5;//2.5;
+  N_o = 30;
 
   double k_cl_gain, k_cl_arm_gain, k_cl_mass;
-  k_cl_mass = 0.1;
+  k_cl_mass = 0.3;
   k_cl_gain = 0.1;
   k_cl_arm_gain = 0.1;
   k_cl = Eigen::Matrix<double, 13, 13>::Identity() * k_cl_gain;
@@ -135,8 +142,8 @@ void reference_cb(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr 
   payload_reference_linear_velocity(0) = reference_input.velocities[0].linear.x;
   payload_reference_linear_velocity(1) = reference_input.velocities[0].linear.y;
   payload_reference_linear_velocity(2) = reference_input.velocities[0].linear.z;
-  payload_reference_angular_velocity(0) = 0;
-  payload_reference_angular_velocity(1) = 0;
+  // payload_reference_angular_velocity(0) = 0;
+  // payload_reference_angular_velocity(1) = 0;
   // payload_reference_angular_velocity(2) = 0;
   payload_reference_position(0) = reference_input.transforms[0].translation.x;
   payload_reference_position(1) = reference_input.transforms[0].translation.y;
@@ -153,25 +160,33 @@ void reference_cb(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr 
 
   if(rotation == true){
     if(payload_reference_linear_velocity(0) != 0){
-      desired_yaw = atan2(payload_reference_linear_velocity(1), payload_reference_linear_velocity(0));
+      desired_angle(0) = 0;
+      desired_angle(1) = 0;
+      desired_angle(2) = atan2(payload_reference_linear_velocity(1), payload_reference_linear_velocity(0));
     }
-    angle_error = desired_yaw - payload_yaw;
-    if(angle_error > M_PI){
-      angle_error = angle_error - 2 * M_PI;
-    }else if(angle_error < -M_PI){
-      angle_error = angle_error + 2 * M_PI;
+    angle_error(0) = desired_angle(0) - payload_pitch;
+    angle_error(1) = desired_angle(1) - payload_roll;
+    angle_error(2) = desired_angle(2) - payload_yaw;
+    Eigen::Vector3d angle_error_i = R * angle_error;
+    for(int i=0;i<3;i++){
+      if(angle_error_i(i) > M_PI){
+        angle_error_i(i) = angle_error_i(i) - 2 * M_PI;
+      }else if(angle_error_i(i) < -M_PI){
+        angle_error_i(i) = angle_error_i(i) + 2 * M_PI;
+      }
+      payload_reference_angular_velocity(i) = K_p(i) * angle_error_i(i);
     }
-    static double w_last = 0;
-    double bound = 10.0;
-    payload_reference_angular_velocity(2) = K_p * angle_error;
-    // payload_reference_angular_acceleration(2) = K_p * angle_error * 0.05;
+    // double bound = 10.0;
+    // payload_reference_angular_acceleration(2) = K_p(i) * angle_error(2) * 0.05;
     // if(payload_reference_angular_acceleration(2) > bound){
     //   payload_reference_angular_acceleration(2) = bound;
     // }else if(payload_reference_angular_acceleration(2) < -bound){
     //   payload_reference_angular_acceleration(2) = -bound;
     // }
-    w_last = K_p * angle_error;
+
   }else{
+    payload_reference_angular_velocity(0) = 0;
+    payload_reference_angular_velocity(1) = 0;
     payload_reference_angular_velocity(2) = 0;
     payload_reference_angular_acceleration(2) = 0;
   }
@@ -297,8 +312,8 @@ int main(int argc, char **argv)
   while(ros::ok()){
 
     if(rotation == true){
-      R_d <<  cos(-desired_yaw), sin(-desired_yaw), 0,
-             -sin(-desired_yaw), cos(-desired_yaw), 0,
+      R_d <<  cos(-desired_angle(2)), sin(-desired_angle(2)), 0,
+             -sin(-desired_angle(2)), cos(-desired_angle(2)), 0,
                               0,                 0, 1;
     }
 
@@ -339,7 +354,7 @@ int main(int argc, char **argv)
 #if (FORCE_INPUT_SWITCHER == USE_COMMAND_FORCE)
     pre_f_i << wrench(0), wrench(1), wrench(2);
 #elif (FORCE_INPUT_SWITCHER == USE_FORCE_SENSOR)
-    pre_f_i << true_tau(0), true_tau(1), true_tau(2);
+    pre_f_i << true_tau(0), true_tau(1), 0;//true_tau(2); //broken
 #endif
 
     Eigen::Matrix<double, 3, 13> Y_l;
@@ -347,11 +362,11 @@ int main(int argc, char **argv)
     Eigen::Matrix<double, 6, 13> Y_o;
 
     Y_l.block<3, 1>(0, 0) = a_r;
-    Y_l.block<3, 3>(0, 1) = -hat_map(al_r) * R - hat_map(payload_angular_velocity) * hat_map(w_r) * R;
+    Y_l.block<3, 3>(0, 1) = -hat_map(al_r - G) * R - hat_map(payload_angular_velocity) * hat_map(w_r) * R;
     Y_l.block<3, 9>(0, 4) = Eigen::MatrixXd::Zero(3, 9);
 
     Y_r.block<3, 1>(0, 0) = Eigen::MatrixXd::Zero(3, 1);
-    Y_r.block<3, 3>(0, 1) = hat_map(a_r) * R + hat_map(payload_angular_velocity) * hat_map(v_r) * R -
+    Y_r.block<3, 3>(0, 1) = hat_map(a_r + G) * R + hat_map(payload_angular_velocity) * hat_map(v_r) * R -
                                                hat_map(w_r) * hat_map(payload_linear_velocity) * R;
     Y_r.block<3, 6>(0, 4) = R * regressor_helper_function(R.transpose() * al_r) +
                             hat_map(payload_angular_velocity) * R * regressor_helper_function(R.transpose() * w_r);
@@ -450,8 +465,8 @@ int main(int argc, char **argv)
     }else{
       robot_cmd.force.x = wrench(0);
       robot_cmd.force.y = wrench(1);
-      robot_cmd.force.z = wrench(2) + 0.9 * 8.0 / 3.0 * g;
-      // robot_cmd.force.z = wrench(2);
+      robot_cmd.force.z = wrench(2) + 0.9 * 8.0 / 3.0 * 9.81;
+      // robot_cmd.force.z = 0.65 * true_tau(2);
       robot_cmd.torque.x = wrench(3);
       robot_cmd.torque.y = wrench(4);
       robot_cmd.torque.z = wrench(5);
@@ -469,6 +484,8 @@ int main(int argc, char **argv)
     // std::cout << "r_px: " << o_i_hat(1) / o_i_hat(0) << std::endl << std::endl;
     // std::cout << "r_py: " << o_i_hat(2) / o_i_hat(0) << std::endl << std::endl;
     // std::cout << "r_pz: " << o_i_hat(3) / o_i_hat(0) << std::endl << std::endl;
+    // std::cout << "Y_o * o_i_hat: " << Y_o * o_i_hat << std::endl << std::endl;
+    // std::cout << "Y_o: " << Y_o << std::endl << std::endl;
     std::cout << "r_i: " << o_i_hat(10) << "  " <<o_i_hat(11) << "  "  << o_i_hat(12) <<std::endl;
     std::cout << "ri ground truth: " << std::endl << r_i << std::endl << std::endl;
     std::cout << "-------" << std::endl;
@@ -490,7 +507,7 @@ int main(int argc, char **argv)
       s_n += s(i) * s(i);
     }
     s_norm.x = s_n;
-    if(s_n < -1){
+    if(s_n < 0.03){
       ICL_update = false;
     }else{
       ICL_update = true;
