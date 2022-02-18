@@ -44,7 +44,8 @@
       <magnetic_field>6.0e-6 2.3e-5 -4.2e-5</magnetic_field>
     </physics>
 
-    <!--<model name="slope_1">
+    <!--
+    <model name="slope_1">
       <static>true</static>
       <pose>0 0 0.0 0 0.08 0</pose>
       <link name="link">
@@ -85,6 +86,7 @@
         </visual>
       </link>
     </model>
+    -->
 
     <model name='uneven'>
       <pose frame=''>0 0 0 0 0 0</pose>
@@ -108,7 +110,7 @@
         <enable_wind>0</enable_wind>
         <kinematic>0</kinematic>
       </link>
-    </model>-->
+    </model>
 
     <!--<model name='uneven'>
       <pose frame=''>0 0 -0.1 0 0 0</pose>

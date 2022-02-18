@@ -28,6 +28,7 @@ Eigen::Vector3d r_i;
 
 // state measurement
 Eigen::Vector3d payload_linear_velocity;
+Eigen::Vector3d payload_angular_velocity_b;
 Eigen::Vector3d payload_angular_velocity;
 Eigen::Vector3d payload_position;
 double payload_roll, payload_yaw, payload_pitch;
@@ -44,7 +45,7 @@ Eigen::Vector3d desired_angle;
 Eigen::Matrix<double, 13, 1> o_i_hat;
 std::queue<Eigen::Matrix<double, 13, 1>> ICL_queue;
 bool pop_on = false;
-double g = 0;//9.81;
+double g = 9.81;
 Eigen::Vector3d G;
 double control_rate = 20;
 Eigen::Vector3d angle_error;
@@ -84,7 +85,7 @@ void initialized_params(){
   // K_d.bottomRightCorner(1, 1) = Eigen::Matrix<double, 1, 1>::Identity() * Kdr_gain;
 
   o_i_hat = Eigen::MatrixXd::Zero(13, 1);
-  o_i_hat(0) = 2.0; // mass
+  o_i_hat(0) = 8.0 / 3.0; // mass
   o_i_hat(1) = o_i_hat(0) * (-0.666666);
   o_i_hat(2) = o_i_hat(0) * (-0.666666);
   o_i_hat(4) = 0.8416666 / 3.0; // Ixx
@@ -97,13 +98,13 @@ void initialized_params(){
   // o_i_hat(11) = 0; //r_iy
   // o_i_hat(12) = 0; //r_iz
 
-  K_p << 0, 0, 1.5;//2.5;
+  K_p << 0.1, 0.3, 1.5;//2.5;
   N_o = 10;
 
   double k_cl_gain, k_cl_arm_gain, k_cl_mass;
   k_cl_mass = 0.04;
   k_cl_gain = 0.1;
-  k_cl_arm_gain = 0.1;
+  k_cl_arm_gain = 0.05;
   k_cl = Eigen::Matrix<double, 13, 13>::Identity() * k_cl_gain;
   k_cl(0, 0) = k_cl_mass;
   k_cl.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * k_cl_arm_gain;
@@ -125,9 +126,11 @@ void payload_orientation_cb(const sensor_msgs::Imu::ConstPtr &msg){
     R = q.normalized().toRotationMatrix();
     float lpf_gain = 0.2;
 
-    payload_angular_velocity(0) = payload_imu.angular_velocity.x * lpf_gain + payload_angular_velocity(0) * (1-lpf_gain);
-    payload_angular_velocity(1) = payload_imu.angular_velocity.y * lpf_gain + payload_angular_velocity(1) * (1-lpf_gain);
-    payload_angular_velocity(2) = payload_imu.angular_velocity.z * lpf_gain + payload_angular_velocity(2) * (1-lpf_gain);
+    payload_angular_velocity_b(0) = payload_imu.angular_velocity.x * lpf_gain + payload_angular_velocity_b(0) * (1-lpf_gain);
+    payload_angular_velocity_b(1) = payload_imu.angular_velocity.y * lpf_gain + payload_angular_velocity_b(1) * (1-lpf_gain);
+    payload_angular_velocity_b(2) = payload_imu.angular_velocity.z * lpf_gain + payload_angular_velocity_b(2) * (1-lpf_gain);
+
+    payload_angular_velocity = R * payload_angular_velocity_b;
 
     tf::Quaternion quaternion(q.x(), q.y(), q.z(), q.w());
     tf::Matrix3x3(quaternion).getRPY(payload_roll, payload_pitch, payload_yaw);
@@ -212,7 +215,7 @@ void payload_odom_cb(const nav_msgs::Odometry::ConstPtr &msg){
 void payload_ft_sensor_cb(const geometry_msgs::WrenchStamped::ConstPtr &msg){
   geometry_msgs::WrenchStamped payload_ft;
   payload_ft = *msg;
-  float lpf_gain = 0.4;
+  float lpf_gain = 0.2;
   true_tau << payload_ft.wrench.force.x * lpf_gain + true_tau(0) * (1-lpf_gain),
               payload_ft.wrench.force.y * lpf_gain + true_tau(1) * (1-lpf_gain),
               payload_ft.wrench.force.z * lpf_gain + true_tau(2) * (1-lpf_gain),
@@ -352,9 +355,9 @@ int main(int argc, char **argv)
     Eigen::Vector3d pre_f_i;
     static Eigen::Matrix<double, 6, 1> wrench = Eigen::MatrixXd::Zero(6, 1);
 #if (FORCE_INPUT_SWITCHER == USE_COMMAND_FORCE)
-    pre_f_i << wrench(0), wrench(1), wrench(2);
+    pre_f_i << wrench(0), wrench(1), 0;//wrench(2);
 #elif (FORCE_INPUT_SWITCHER == USE_FORCE_SENSOR)
-    pre_f_i << true_tau(0), true_tau(1), 0;//true_tau(2); //broken
+    pre_f_i << true_tau(0), true_tau(1), true_tau(2) - 0.9 * 8.0 / 3.0 * g;//o_i_hat(0) * g; //broken
 #endif
 
     Eigen::Matrix<double, 3, 13> Y_l;
@@ -362,11 +365,11 @@ int main(int argc, char **argv)
     Eigen::Matrix<double, 6, 13> Y_o;
 
     Y_l.block<3, 1>(0, 0) = a_r;
-    Y_l.block<3, 3>(0, 1) = -hat_map(al_r - G) * R - hat_map(payload_angular_velocity) * hat_map(w_r) * R;
+    Y_l.block<3, 3>(0, 1) = -hat_map(al_r) * R - hat_map(payload_angular_velocity) * hat_map(w_r) * R;
     Y_l.block<3, 9>(0, 4) = Eigen::MatrixXd::Zero(3, 9);
 
     Y_r.block<3, 1>(0, 0) = Eigen::MatrixXd::Zero(3, 1);
-    Y_r.block<3, 3>(0, 1) = hat_map(a_r + G) * R + hat_map(payload_angular_velocity) * hat_map(v_r) * R -
+    Y_r.block<3, 3>(0, 1) = hat_map(a_r) * R + hat_map(payload_angular_velocity) * hat_map(v_r) * R -
                                                hat_map(w_r) * hat_map(payload_linear_velocity) * R;
     Y_r.block<3, 6>(0, 4) = R * regressor_helper_function(R.transpose() * al_r) +
                             hat_map(payload_angular_velocity) * R * regressor_helper_function(R.transpose() * w_r);
@@ -465,7 +468,7 @@ int main(int argc, char **argv)
     }else{
       robot_cmd.force.x = wrench(0);
       robot_cmd.force.y = wrench(1);
-      robot_cmd.force.z = wrench(2) + 0.8 * 8.0 / 3.0 * 9.81;
+      robot_cmd.force.z = 0.8 * 8.0 / 3.0 * g;
       // robot_cmd.force.z = 0.65 * true_tau(2);
       robot_cmd.torque.x = wrench(3);
       robot_cmd.torque.y = wrench(4);
@@ -486,6 +489,8 @@ int main(int argc, char **argv)
     // std::cout << "r_pz: " << o_i_hat(3) / o_i_hat(0) << std::endl << std::endl;
     // std::cout << "Y_o * o_i_hat: " << Y_o * o_i_hat << std::endl << std::endl;
     // std::cout << "Y_o: " << Y_o << std::endl << std::endl;
+    std::cout << "hat_map(pre_f_i) * R: " << hat_map(pre_f_i) * R << std::endl << std::endl;
+
     std::cout << "r_i: " << o_i_hat(10) << "  " <<o_i_hat(11) << "  "  << o_i_hat(12) <<std::endl;
     std::cout << "ri ground truth: " << std::endl << r_i << std::endl << std::endl;
     std::cout << "-------" << std::endl;
