@@ -100,7 +100,7 @@ int main(int argc, char **argv)
     p8.acc << 0,0,0;
     p8.yaw = 0;
 
-  float duration = 7.0;
+  float duration = 9.0;
   path.push_back(segments(p1,p2,duration));
   path.push_back(segments(p2,p3,duration));
   path.push_back(segments(p3,p4,duration));

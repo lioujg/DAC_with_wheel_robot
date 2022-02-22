@@ -1,6 +1,6 @@
 <?xml version='1.0'?>
-<sdf version='1.5'>
-  <model name="obstacle">
+<sdf version='1.0'>
+  <model name="wheel_ball">
     <static>false</static>
     <link name="obstacle_1">
       <pose>0 0 0 0 0 0</pose>
@@ -216,119 +216,118 @@
       </sensor>
     </joint>
 
-
-    <link name="robot_link_1">
-      <pose>-1.55 0 -0.1 0 0 0</pose>
-        <inertial>
-          <inertia>
-            <ixx>0.004</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>0.004</iyy>
-            <iyz>0</iyz>
-            <izz>0.0032</izz>
+    <link name='ball_1'>
+      <pose>-1.55 0 -0.25 0 0 0</pose>
+      <inertial>
+        <inertia>
+          <ixx>0.0016</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0016</iyy>
+          <iyz>0</iyz>
+          <izz>0.0016</izz>
           </inertia>
-          <mass>0.04</mass>
-        </inertial>
-
-        <collision name="robot_1_collision">
-            <geometry>
-             <box>
-             <size>0.2 0.2 0.1</size>
-             </box>
-            </geometry>
-
-        </collision>
-
-        <visual name="robot_1_visual">
-            <geometry>
-             <box>
-             <size>0.2 0.2 0.1</size>
-             </box>
-            </geometry>
-        </visual>
+        <mass>0.1</mass>
+      </inertial>
+      <collision name='ball_1_collision'>
+        <geometry>
+          <sphere>
+            <radius>0.2</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <visual name='ball_1_visual'>
+        <geometry>
+          <sphere>
+            <radius>0.2</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <diffuse>1 0 0 1</diffuse>
+          <ambient>1 0 0 1</ambient>
+        </material>
+      </visual>
     </link>
-
-    <joint name="robot_joint_1" type="fixed">
+    <joint name="ball_1_joint" type="ball">
       <parent>payload_link_1</parent>
-      <child>robot_link_1</child>
-      <pose>0.00 0.0 0.0 0 0.0 0.0</pose>
+      <child>ball_1</child>
+      <pose> 0 0 0 0 0 0 </pose>
     </joint>
 
-    <link name="robot_link_2">
-      <pose>1 -0.55 -0.1 0 0 0</pose>
-        <inertial>
-          <inertia>
-            <ixx>0.004</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>0.004</iyy>
-            <iyz>0</iyz>
-            <izz>0.0032</izz>
+    <link name='ball_2'>
+      <pose>1 -0.55 -0.25 0 0 0</pose>
+      <inertial>
+        <inertia>
+          <ixx>0.0016</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0016</iyy>
+          <iyz>0</iyz>
+          <izz>0.0016</izz>
           </inertia>
-          <mass>0.04</mass>
-        </inertial>
-
-        <collision name="robot_2_collision">
-            <geometry>
-             <box>
-             <size>0.2 0.2 0.1</size>
-             </box>
-            </geometry>
-
-        </collision>
-
-        <visual name="robot_2_visual">
-            <geometry>
-             <box>
-             <size>0.2 0.2 0.1</size>
-             </box>
-            </geometry>
-        </visual>
+        <mass>0.1</mass>
+      </inertial>
+      <collision name='ball_2_collision'>
+        <geometry>
+          <sphere>
+            <radius>0.2</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <visual name='ball_2_visual'>
+        <geometry>
+          <sphere>
+            <radius>0.2</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <diffuse>1 0 0 1</diffuse>
+          <ambient>1 0 0 1</ambient>
+        </material>
+      </visual>
     </link>
-
-    <joint name="robot_joint_2" type="fixed">
+    <joint name="ball_2_joint" type="ball">
       <parent>payload_link_2</parent>
-      <child>robot_link_2</child>
-      <pose>0.00 0.0 0.0 0 0.0 0.0</pose>
+      <child>ball_2</child>
+      <pose> 0 0 0 0 0 0 </pose>
     </joint>
 
-    <link name="robot_link_3">
-      <pose>1.55 1.45 -0.1 0 0 0</pose>
-        <inertial>
-          <inertia>
-            <ixx>0.004</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>0.004</iyy>
-            <iyz>0</iyz>
-            <izz>0.0032</izz>
+    <link name='ball_3'>
+      <pose>1.55 1.45 -0.25 0 0 0</pose>
+      <inertial>
+        <inertia>
+          <ixx>0.0016</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0016</iyy>
+          <iyz>0</iyz>
+          <izz>0.0016</izz>
           </inertia>
-          <mass>0.04</mass>
-        </inertial>
-
-        <collision name="robot_3_collision">
-            <geometry>
-             <box>
-             <size>0.2 0.2 0.1</size>
-             </box>
-            </geometry>
-
-        </collision>
-
-        <visual name="robot_3_visual">
-            <geometry>
-             <box>
-             <size>0.2 0.2 0.1</size>
-             </box>
-            </geometry>
-        </visual>
+        <mass>0.1</mass>
+      </inertial>
+      <collision name='ball_3_collision'>
+        <geometry>
+          <sphere>
+            <radius>0.2</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <visual name='ball_3_visual'>
+        <geometry>
+          <sphere>
+            <radius>0.2</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <diffuse>1 0 0 1</diffuse>
+          <ambient>1 0 0 1</ambient>
+        </material>
+      </visual>
     </link>
-
-    <joint name="robot_joint_3" type="fixed">
+    <joint name="ball_3_joint" type="ball">
       <parent>payload_link_3</parent>
-      <child>robot_link_3</child>
-      <pose>0.00 0.0 0.0 0 0.0 0.0</pose>
+      <child>ball_3</child>
+      <pose> 0 0 0 0 0 0 </pose>
     </joint>
 
 

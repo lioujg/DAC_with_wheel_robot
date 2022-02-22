@@ -19,7 +19,7 @@
 
 # define USE_FORCE_SENSOR 0
 # define USE_COMMAND_FORCE 1
-# define FORCE_INPUT_SWITCHER USE_FORCE_SENSOR
+# define FORCE_INPUT_SWITCHER USE_COMMAND_FORCE
 
 // pose
 Eigen::Matrix3d R;
@@ -33,6 +33,8 @@ Eigen::Vector3d payload_angular_velocity;
 Eigen::Vector3d payload_position;
 double payload_roll, payload_yaw, payload_pitch;
 Eigen::Matrix<double, 6, 1> true_tau;
+Eigen::Vector3d true_f_b;
+Eigen::Vector3d true_m_b;
 
 // state reference
 Eigen::Vector3d payload_reference_linear_velocity;
@@ -72,12 +74,12 @@ void initialized_params(){
   lambda = 1.1;
   G << 0, 0, -g;
 
-  double gamma_gain = 0.1, gamma_mass = 0.5, gamma_arm = 0.1; //0.6
+  double gamma_gain = 0.1, gamma_mass = 0.35, gamma_arm = 0.1; //0.6
   gamma_o = Eigen::Matrix<double, 13, 13>::Identity() * gamma_gain;
   gamma_o(0, 0) = gamma_mass;
   gamma_o.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * gamma_arm;
 
-  double Kdl_gain = 10;//12;
+  double Kdl_gain = 9;//12;
   double Kdr_gain = 7;//2.5;
   K_d = Eigen::Matrix<double, 6, 6>::Identity();
   K_d.topLeftCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * Kdl_gain;
@@ -85,9 +87,9 @@ void initialized_params(){
   // K_d.bottomRightCorner(1, 1) = Eigen::Matrix<double, 1, 1>::Identity() * Kdr_gain;
 
   o_i_hat = Eigen::MatrixXd::Zero(13, 1);
-  o_i_hat(0) = 8.0 / 3.0; // mass
-  o_i_hat(1) = o_i_hat(0) * (-0.666666);
-  o_i_hat(2) = o_i_hat(0) * (-0.666666);
+  o_i_hat(0) = 1.5; // mass
+  o_i_hat(1) = o_i_hat(0) * (-0.666666) / 3.0;
+  o_i_hat(2) = o_i_hat(0) * (-0.666666) / 3.0;
   o_i_hat(4) = 0.8416666 / 3.0; // Ixx
   o_i_hat(7) = 4.8416666 / 3.0; // Iyy
   o_i_hat(9) = 6.8333333 / 3.0; // Izz
@@ -98,8 +100,8 @@ void initialized_params(){
   // o_i_hat(11) = 0; //r_iy
   // o_i_hat(12) = 0; //r_iz
 
-  K_p << 0.1, 0.3, 1.5;//2.5;
-  N_o = 10;
+  K_p << 0.001, 0.001, 1.0;//2.5;
+  N_o = 20;
 
   double k_cl_gain, k_cl_arm_gain, k_cl_mass;
   k_cl_mass = 0.04;
@@ -109,7 +111,7 @@ void initialized_params(){
   k_cl(0, 0) = k_cl_mass;
   k_cl.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * k_cl_arm_gain;
   // k_cl(9, 9) = k_cl_gain;
-  adaptive_gain = 1.0 / 2.0;
+  adaptive_gain = 1.0 / 1.0;
 }
 
 void payload_orientation_cb(const sensor_msgs::Imu::ConstPtr &msg){
@@ -215,13 +217,31 @@ void payload_odom_cb(const nav_msgs::Odometry::ConstPtr &msg){
 void payload_ft_sensor_cb(const geometry_msgs::WrenchStamped::ConstPtr &msg){
   geometry_msgs::WrenchStamped payload_ft;
   payload_ft = *msg;
-  float lpf_gain = 0.2;
-  true_tau << payload_ft.wrench.force.x * lpf_gain + true_tau(0) * (1-lpf_gain),
-              payload_ft.wrench.force.y * lpf_gain + true_tau(1) * (1-lpf_gain),
-              payload_ft.wrench.force.z * lpf_gain + true_tau(2) * (1-lpf_gain),
-              payload_ft.wrench.torque.x * lpf_gain + true_tau(3) * (1-lpf_gain),
-              payload_ft.wrench.torque.y * lpf_gain + true_tau(4) * (1-lpf_gain),
-              payload_ft.wrench.torque.z * lpf_gain + true_tau(5) * (1-lpf_gain);
+  float lpf_gain = 0.7;
+  static double gravity_bias = payload_ft.wrench.force.z;
+  true_f_b << payload_ft.wrench.force.x * lpf_gain + true_f_b(0) * (1.0-lpf_gain),
+              payload_ft.wrench.force.y * lpf_gain + true_f_b(1) * (1.0-lpf_gain),
+              payload_ft.wrench.force.z * lpf_gain + true_f_b(2) * (1.0-lpf_gain);
+
+  true_m_b << payload_ft.wrench.torque.x * lpf_gain + true_m_b(0) * (1.0-lpf_gain),
+              payload_ft.wrench.torque.y * lpf_gain + true_m_b(1) * (1.0-lpf_gain),
+              payload_ft.wrench.torque.z * lpf_gain + true_m_b(2) * (1.0-lpf_gain);
+  true_tau.block<3, 1>(0, 0) = R * true_f_b;
+  true_tau.block<3, 1>(3, 0) = R * true_m_b;
+}
+
+geometry_msgs::Inertia inertia_sum;
+geometry_msgs::Inertia total_inertia_1;
+geometry_msgs::Inertia total_inertia_2;
+geometry_msgs::Inertia total_inertia_3;
+void total_inertia_1_cb(const geometry_msgs::Inertia::ConstPtr &msg){
+  total_inertia_1 = *msg;
+}
+void total_inertia_2_cb(const geometry_msgs::Inertia::ConstPtr &msg){
+  total_inertia_2 = *msg;
+}
+void total_inertia_3_cb(const geometry_msgs::Inertia::ConstPtr &msg){
+  total_inertia_3 = *msg;
 }
 
 Eigen::Vector3d vee_map(Eigen::Matrix3d Matrix){
@@ -268,17 +288,11 @@ Eigen::Matrix<double, 3, 6> regressor_helper_function(Eigen::Vector3d Vector){
 
 Eigen::Matrix<double, 13, 1> ICL_queue_sum(std::queue<Eigen::Matrix<double, 13, 1>> queue){
   Eigen::Matrix<double, 13, 1> sum = Eigen::MatrixXd::Zero(13, 1);
-  // while(!queue.empty()){
-  //   sum += queue.front();
-  //   queue.pop();
-  // }
-
   int size = queue.size();
   for(int i=0;i<size;i++){
     sum += queue.front();
     queue.pop();
   }
-
   return sum;
 }
 
@@ -300,6 +314,11 @@ int main(int argc, char **argv)
   ros::Subscriber payload_odom_sub = nh.subscribe<nav_msgs::Odometry>("/payload/position",4,payload_odom_cb);
   ros::Subscriber payload_ft_sub = nh.subscribe<geometry_msgs::WrenchStamped>("/payload_ft_sensor",4,payload_ft_sensor_cb);
 
+  // compute the total inertia
+  ros::Subscriber total_inertia_1_sub = nh.subscribe<geometry_msgs::Inertia>("/robot_1/estimated",4,total_inertia_1_cb);
+  ros::Subscriber total_inertia_2_sub = nh.subscribe<geometry_msgs::Inertia>("/robot_2/estimated",4,total_inertia_2_cb);
+  ros::Subscriber total_inertia_3_sub = nh.subscribe<geometry_msgs::Inertia>("/robot_3/estimated",4,total_inertia_3_cb);
+
   ros::Publisher robot_controller_pub = nh.advertise<geometry_msgs::Wrench>("robot_wrench",4);
   // ros::Publisher estimated_m_pub = nh.advertise<geometry_msgs::Point>("/estimated/mass",4);
   // ros::Publisher estimated_I_pub = nh.advertise<geometry_msgs::Inertia>("/estimated/inertia",4);
@@ -307,6 +326,7 @@ int main(int argc, char **argv)
   ros::Publisher pos_err_pub = nh.advertise<geometry_msgs::Pose2D>("/position_error",4);
   ros::Publisher arm_err_pub = nh.advertise<geometry_msgs::Point>("/arm_est_error",4);
   ros::Publisher s_norm_pub = nh.advertise<geometry_msgs::Point>("/s_norm",4);
+  ros::Publisher estimated_sum_pub = nh.advertise<geometry_msgs::Inertia>("/estimated_sum",4);
 
   ros::Rate loop_rate(control_rate);
   initialized_params();
@@ -355,9 +375,9 @@ int main(int argc, char **argv)
     Eigen::Vector3d pre_f_i;
     static Eigen::Matrix<double, 6, 1> wrench = Eigen::MatrixXd::Zero(6, 1);
 #if (FORCE_INPUT_SWITCHER == USE_COMMAND_FORCE)
-    pre_f_i << wrench(0), wrench(1), 0;//wrench(2);
+    pre_f_i << wrench(0), wrench(1), 0;
 #elif (FORCE_INPUT_SWITCHER == USE_FORCE_SENSOR)
-    pre_f_i << true_tau(0), true_tau(1), true_tau(2) - 0.9 * 8.0 / 3.0 * g;//o_i_hat(0) * g; //broken
+    pre_f_i << true_tau(0), true_tau(1), true_tau(2);// broken
 #endif
 
     Eigen::Matrix<double, 3, 13> Y_l;
@@ -468,7 +488,8 @@ int main(int argc, char **argv)
     }else{
       robot_cmd.force.x = wrench(0);
       robot_cmd.force.y = wrench(1);
-      robot_cmd.force.z = 0.8 * 8.0 / 3.0 * g;
+      robot_cmd.force.z = wrench(2);
+      // robot_cmd.force.z = 0.8 * 8.0 / 3.0 * g;
       // robot_cmd.force.z = 0.65 * true_tau(2);
       robot_cmd.torque.x = wrench(3);
       robot_cmd.torque.y = wrench(4);
@@ -477,19 +498,20 @@ int main(int argc, char **argv)
 
     // debug output
     std::cout << "-------" << std::endl;
+    std::cout << "m sum: " << inertia_sum.m << std::endl << std::endl;
     std::cout << "m: " << o_i_hat(0) << std::endl << std::endl;
     // std::cout << "Ixx: " << o_i_hat(4) << std::endl << std::endl;
     // std::cout << "Iyy: " << o_i_hat(7) << std::endl << std::endl;
     // std::cout << "Izz: " << o_i_hat(9) << std::endl << std::endl;
     // std::cout << "-k_cl * gamma_o * ICL_sum: " << -k_cl * gamma_o * ICL_sum << std::endl << std::endl;
-    // std::cout << "wrench: " << wrench << std::endl << std::endl;
+    std::cout << "wrench: " << wrench << std::endl << std::endl;
     // std::cout << "ICL: " << ICL_sum << std::endl << std::endl;
     // std::cout << "r_px: " << o_i_hat(1) / o_i_hat(0) << std::endl << std::endl;
     // std::cout << "r_py: " << o_i_hat(2) / o_i_hat(0) << std::endl << std::endl;
     // std::cout << "r_pz: " << o_i_hat(3) / o_i_hat(0) << std::endl << std::endl;
     // std::cout << "Y_o * o_i_hat: " << Y_o * o_i_hat << std::endl << std::endl;
     // std::cout << "Y_o: " << Y_o << std::endl << std::endl;
-    std::cout << "hat_map(pre_f_i) * R: " << hat_map(pre_f_i) * R << std::endl << std::endl;
+    // std::cout << "hat_map(pre_f_i) * R: " << hat_map(pre_f_i) * R << std::endl << std::endl;
 
     std::cout << "r_i: " << o_i_hat(10) << "  " <<o_i_hat(11) << "  "  << o_i_hat(12) <<std::endl;
     std::cout << "ri ground truth: " << std::endl << r_i << std::endl << std::endl;
@@ -512,7 +534,7 @@ int main(int argc, char **argv)
       s_n += s(i) * s(i);
     }
     s_norm.x = s_n;
-    if(s_n < 0.03){
+    if(s_n < 0.02){
       ICL_update = false;
     }else{
       ICL_update = true;
@@ -537,9 +559,8 @@ int main(int argc, char **argv)
 
     dt = 1 / control_rate;
 
-    // geometry_msgs::Point mass;
+    // Inertia
     geometry_msgs::Inertia inertia;
-    // mass.x = o_i_hat(0);
     inertia.m = o_i_hat(0);
     inertia.ixx = o_i_hat(4);
     inertia.ixy = o_i_hat(5);
@@ -548,15 +569,25 @@ int main(int argc, char **argv)
     inertia.iyz = o_i_hat(8);
     inertia.izz = o_i_hat(9);
 
+    // Inertia sum
+    inertia_sum.m = total_inertia_1.m + total_inertia_2.m + total_inertia_3.m;
+    inertia_sum.ixx = total_inertia_1.ixx + total_inertia_2.ixx + total_inertia_3.ixx;
+    inertia_sum.ixy = total_inertia_1.ixy + total_inertia_2.ixy + total_inertia_3.ixy;
+    inertia_sum.ixz = total_inertia_1.ixz + total_inertia_2.ixz + total_inertia_3.ixz;
+    inertia_sum.iyy = total_inertia_1.iyy + total_inertia_2.iyy + total_inertia_3.iyy;
+    inertia_sum.iyz = total_inertia_1.iyz + total_inertia_2.iyz + total_inertia_3.iyz;
+    inertia_sum.izz = total_inertia_1.izz + total_inertia_2.izz + total_inertia_3.izz;
+
   	robot_controller_pub.publish(robot_cmd);
     // estimated_m_pub.publish(mass);
     estimated_pub.publish(inertia);
     pos_err_pub.publish(pos_error);
     arm_err_pub.publish(arm_error);
     s_norm_pub.publish(s_norm);
+    estimated_sum_pub.publish(inertia_sum);
+
     loop_rate.sleep();
     ros::spinOnce();
   }
-
   return 0;
 }
