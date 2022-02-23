@@ -19,7 +19,7 @@
 
 # define USE_FORCE_SENSOR 0
 # define USE_COMMAND_FORCE 1
-# define FORCE_INPUT_SWITCHER USE_COMMAND_FORCE
+# define FORCE_INPUT_SWITCHER USE_FORCE_SENSOR
 
 // pose
 Eigen::Matrix3d R;
@@ -74,7 +74,7 @@ void initialized_params(){
   lambda = 1.1;
   G << 0, 0, -g;
 
-  double gamma_gain = 0.1, gamma_mass = 0.35, gamma_arm = 0.1; //0.6
+  double gamma_gain = 0.1, gamma_mass = 0.4, gamma_arm = 0.1; //0.6
   gamma_o = Eigen::Matrix<double, 13, 13>::Identity() * gamma_gain;
   gamma_o(0, 0) = gamma_mass;
   gamma_o.bottomRightCorner(3, 3) = Eigen::Matrix<double, 3, 3>::Identity() * gamma_arm;
@@ -104,7 +104,7 @@ void initialized_params(){
   N_o = 20;
 
   double k_cl_gain, k_cl_arm_gain, k_cl_mass;
-  k_cl_mass = 0.04;
+  k_cl_mass = 0.12;
   k_cl_gain = 0.1;
   k_cl_arm_gain = 0.05;
   k_cl = Eigen::Matrix<double, 13, 13>::Identity() * k_cl_gain;
@@ -217,7 +217,7 @@ void payload_odom_cb(const nav_msgs::Odometry::ConstPtr &msg){
 void payload_ft_sensor_cb(const geometry_msgs::WrenchStamped::ConstPtr &msg){
   geometry_msgs::WrenchStamped payload_ft;
   payload_ft = *msg;
-  float lpf_gain = 0.7;
+  float lpf_gain = 0.4;
   static double gravity_bias = payload_ft.wrench.force.z;
   true_f_b << payload_ft.wrench.force.x * lpf_gain + true_f_b(0) * (1.0-lpf_gain),
               payload_ft.wrench.force.y * lpf_gain + true_f_b(1) * (1.0-lpf_gain),
@@ -504,7 +504,7 @@ int main(int argc, char **argv)
     // std::cout << "Iyy: " << o_i_hat(7) << std::endl << std::endl;
     // std::cout << "Izz: " << o_i_hat(9) << std::endl << std::endl;
     // std::cout << "-k_cl * gamma_o * ICL_sum: " << -k_cl * gamma_o * ICL_sum << std::endl << std::endl;
-    std::cout << "wrench: " << wrench << std::endl << std::endl;
+    // std::cout << "wrench: " << wrench << std::endl << std::endl;
     // std::cout << "ICL: " << ICL_sum << std::endl << std::endl;
     // std::cout << "r_px: " << o_i_hat(1) / o_i_hat(0) << std::endl << std::endl;
     // std::cout << "r_py: " << o_i_hat(2) / o_i_hat(0) << std::endl << std::endl;
@@ -512,6 +512,7 @@ int main(int argc, char **argv)
     // std::cout << "Y_o * o_i_hat: " << Y_o * o_i_hat << std::endl << std::endl;
     // std::cout << "Y_o: " << Y_o << std::endl << std::endl;
     // std::cout << "hat_map(pre_f_i) * R: " << hat_map(pre_f_i) * R << std::endl << std::endl;
+    std::cout << "true_f_b(2): " << true_f_b(2) << std::endl << std::endl;
 
     std::cout << "r_i: " << o_i_hat(10) << "  " <<o_i_hat(11) << "  "  << o_i_hat(12) <<std::endl;
     std::cout << "ri ground truth: " << std::endl << r_i << std::endl << std::endl;
