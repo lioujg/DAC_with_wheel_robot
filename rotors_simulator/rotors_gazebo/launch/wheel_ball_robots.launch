@@ -23,10 +23,12 @@
         -model payload
         -x 0
         -y 0
-        -z 0.58
+        -z 0.5
         -R 0
         -P 0
         -Y 0"/>
     </group>
+
+    <!--<node name="attach" pkg="gazebo_ros_link_attacher" type="attach.py" output="screen"/>-->
 
 </launch>

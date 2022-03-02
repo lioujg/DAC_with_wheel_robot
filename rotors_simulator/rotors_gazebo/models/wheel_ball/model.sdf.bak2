@@ -3,7 +3,6 @@
   <model name="wheel_ball">
     <static>false</static>
     <link name="obstacle_1">
-      <gravity>0</gravity>
       <pose>0 0 0 0 0 0</pose>
         <inertial>
           <inertia>
@@ -36,7 +35,6 @@
     </link>
 
     <link name="obstacle_2">
-      <gravity>0</gravity>
       <pose>1 1 0 0 0 0</pose>
         <inertial>
           <inertia>
@@ -75,17 +73,17 @@
     </joint>
 
     <link name="payload_link_1">
-      <pose>-1.45 0.55 0 0 0 0</pose>
+      <pose>-1.45 0 -0.1 0 0 0</pose>
         <inertial>
           <inertia>
-            <ixx>0.0006666</ixx>
+            <ixx>0.0000666</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.0006666</iyy>
+            <iyy>0.0000666</iyy>
             <iyz>0</iyz>
-            <izz>0.0006666</izz>
+            <izz>0.0000666</izz>
           </inertia>
-          <mass>0.4</mass>
+          <mass>0.04</mass>
         </inertial>
 
         <collision name="payload_link_1_collision">
@@ -106,10 +104,18 @@
         </visual>
     </link>
 
-    <joint name="payload_joint_1" type="fixed">
+    <!--<joint name="payload_joint_1" type="fixed">
       <parent>obstacle_1</parent>
       <child>payload_link_1</child>
-      <pose>0 -0.05 0 0 0 0</pose>
+      <sensor name="force_torque" type="force_torque">
+        <update_rate>200</update_rate>
+        <always_on>true</always_on>
+      </sensor>
+    </joint>-->
+
+    <joint name="payload_joint_1" type="revolute">
+      <parent>obstacle_1</parent>
+      <child>payload_link_1</child>
       <axis>
         <xyz>0 0 1</xyz>
         <limit>
@@ -118,24 +124,23 @@
         </limit>
       </axis>
       <sensor name="force_torque" type="force_torque">
-        <update_rate>10</update_rate>
+        <update_rate>20</update_rate>
         <always_on>true</always_on>
-        <visualize>true</visualize>
       </sensor>
     </joint>
 
     <link name="payload_link_2">
-      <pose>1 -0.55 0 0 0 0</pose>
+      <pose>1 -0.45 -0.1 0 0 0</pose>
         <inertial>
           <inertia>
-            <ixx>0.0006666</ixx>
+            <ixx>0.0000666</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.0006666</iyy>
+            <iyy>0.0000666</iyy>
             <iyz>0</iyz>
-            <izz>0.0006666</izz>
+            <izz>0.0000666</izz>
           </inertia>
-          <mass>0.4</mass>
+          <mass>0.04</mass>
         </inertial>
 
         <collision name="payload_link_2_collision">
@@ -156,10 +161,18 @@
         </visual>
     </link>
 
-    <joint name="payload_joint_2" type="fixed">
+    <!--<joint name="payload_joint_2" type="fixed">
       <parent>obstacle_1</parent>
       <child>payload_link_2</child>
-      <pose>0 0.05 0 0 0 0</pose>
+      <sensor name="force_torque" type="force_torque">
+        <update_rate>200</update_rate>
+        <always_on>true</always_on>
+      </sensor>
+    </joint>-->
+
+    <joint name="payload_joint_2" type="revolute">
+      <parent>obstacle_1</parent>
+      <child>payload_link_2</child>
       <axis>
         <xyz>0 0 1</xyz>
         <limit>
@@ -168,24 +181,23 @@
         </limit>
       </axis>
       <sensor name="force_torque" type="force_torque">
-        <update_rate>10</update_rate>
+        <update_rate>200</update_rate>
         <always_on>true</always_on>
-        <visualize>true</visualize>
       </sensor>
     </joint>
 
     <link name="payload_link_3">
-      <pose>1.55 1.45 0 0 0 0</pose>
+      <pose>1.45 1.45 -0.1 0 0 0</pose>
         <inertial>
           <inertia>
-            <ixx>0.0006666</ixx>
+            <ixx>0.0000666</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.0006666</iyy>
+            <iyy>0.0000666</iyy>
             <iyz>0</iyz>
-            <izz>0.0006666</izz>
+            <izz>0.0000666</izz>
           </inertia>
-          <mass>0.4</mass>
+          <mass>0.04</mass>
         </inertial>
 
         <collision name="payload_link_3_collision">
@@ -206,10 +218,17 @@
         </visual>
     </link>
 
-    <joint name="payload_joint_3" type="fixed">
+    <!--<joint name="payload_joint_3" type="fixed">
       <parent>obstacle_2</parent>
       <child>payload_link_3</child>
-      <pose>-0.05 0 0 0 0 0</pose>
+      <sensor name="force_torque" type="force_torque">
+        <update_rate>200</update_rate>
+        <always_on>true</always_on>
+      </sensor>
+    </joint>-->
+    <joint name="payload_joint_3" type="revolute">
+      <parent>obstacle_2</parent>
+      <child>payload_link_3</child>
       <axis>
         <xyz>0 0 1</xyz>
         <limit>
@@ -218,14 +237,13 @@
         </limit>
       </axis>
       <sensor name="force_torque" type="force_torque">
-        <update_rate>10</update_rate>
+        <update_rate>200</update_rate>
         <always_on>true</always_on>
-        <visualize>true</visualize>
       </sensor>
     </joint>
 
     <link name='ball_1'>
-      <pose>-1.45 0.55 -0.25 0 0 0</pose>
+      <pose>-1.45 0 -0.35 0 0 0</pose>
       <inertial>
         <inertia>
           <ixx>0.0016</ixx>
@@ -263,7 +281,7 @@
     </joint>
 
     <link name='ball_2'>
-      <pose>1 -0.55 -0.25 0 0 0</pose>
+      <pose>1 -0.45 -0.35 0 0 0</pose>
       <inertial>
         <inertia>
           <ixx>0.0016</ixx>
@@ -301,7 +319,7 @@
     </joint>
 
     <link name='ball_3'>
-      <pose>1.55 1.45 -0.25 0 0 0</pose>
+      <pose>1.45 1.45 -0.35 0 0 0</pose>
       <inertial>
         <inertia>
           <ixx>0.0016</ixx>
@@ -383,7 +401,7 @@
     <joint name="payload_imu_joint" type="fixed">
       <parent>obstacle_1</parent>
       <child>payload_IMU</child>
-      <pose>0.00 0.0 0.0 0 0.0 0.0</pose>
+      <pose>0 0 0 0 -0 0</pose>
     </joint>
 
 
@@ -419,3 +437,5 @@
 
   </model>
 </sdf>
+
+

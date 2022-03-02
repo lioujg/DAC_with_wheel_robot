@@ -49,29 +49,20 @@ link_name_2: 'link'"
 
     rospy.sleep(0.0001)
 
-    rospy.loginfo("Attaching ball 1 and payload")
+    rospy.loginfo("Attaching Robot 1 and payload")
     req = AttachRequest()
-    req.model_name_1 = "payload"
-    req.link_name_1 = "obstacle_1"
+    req.model_name_1 = "robot1"
+    req.link_name_1 = "origin_link"
     req.model_name_2 = "payload"
-    req.link_name_2 = "payload_link_1"
+    req.link_name_2 = "robot_link_1"
 
     attach_srv.call(req)
 
-    rospy.loginfo("Attaching ball 2 and payload")
+    rospy.loginfo("Attaching Robot 2 and payload")
     req = AttachRequest()
-    req.model_name_1 = "payload"
-    req.link_name_1 = "obstacle_1"
+    req.model_name_1 = "robot2"
+    req.link_name_1 = "origin_link"
     req.model_name_2 = "payload"
-    req.link_name_2 = "payload_link_2"
-
-    attach_srv.call(req)
-
-    rospy.loginfo("Attaching ball 3 and payload")
-    req = AttachRequest()
-    req.model_name_1 = "payload"
-    req.link_name_1 = "obstacle_2"
-    req.model_name_2 = "payload"
-    req.link_name_2 = "payload_link_3"
+    req.link_name_2 = "robot_link_2"
 
     attach_srv.call(req)

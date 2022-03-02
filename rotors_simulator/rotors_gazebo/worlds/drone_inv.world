@@ -26,7 +26,7 @@
       <ode>
         <solver>
           <type>quick</type>
-          <iters>300</iters>
+          <iters>100</iters>
           <sor>1.3</sor>
         <use_dynamic_moi_rescaling>0</use_dynamic_moi_rescaling>
         </solver>
@@ -111,7 +111,7 @@
         <enable_wind>0</enable_wind>
         <kinematic>0</kinematic>
       </link>
-    </model>
+    </model>-->
 
     <model name='uneven'>
       <pose frame=''>0 0 -0.1 0 0 0</pose>
@@ -135,7 +135,7 @@
         <enable_wind>0</enable_wind>
         <kinematic>0</kinematic>
       </link>
-    </model>-->
+    </model>
 
   </world>
 </sdf>

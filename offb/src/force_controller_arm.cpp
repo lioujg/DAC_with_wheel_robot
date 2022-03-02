@@ -54,7 +54,7 @@ Eigen::Vector3d angle_error;
 bool ICL_update = true;
 
 // option
-bool rotation = true;
+bool rotation = false;
 bool ICL_update_switcher = true;
 
 // gain
@@ -87,9 +87,9 @@ void initialized_params(){
   // K_d.bottomRightCorner(1, 1) = Eigen::Matrix<double, 1, 1>::Identity() * Kdr_gain;
 
   o_i_hat = Eigen::MatrixXd::Zero(13, 1);
-  o_i_hat(0) = 1.5; // mass
-  o_i_hat(1) = o_i_hat(0) * (-0.666666) / 3.0;
-  o_i_hat(2) = o_i_hat(0) * (-0.666666) / 3.0;
+  o_i_hat(0) = 2.5; // mass
+  o_i_hat(1) = o_i_hat(0) * (-0.666666);
+  o_i_hat(2) = o_i_hat(0) * (-0.666666);
   o_i_hat(4) = 0.8416666 / 3.0; // Ixx
   o_i_hat(7) = 4.8416666 / 3.0; // Iyy
   o_i_hat(9) = 6.8333333 / 3.0; // Izz
@@ -100,12 +100,12 @@ void initialized_params(){
   // o_i_hat(11) = 0; //r_iy
   // o_i_hat(12) = 0; //r_iz
 
-  K_p << 0.001, 0.001, 1.0;//2.5;
+  K_p << 0, 0, 1.0;//2.5;
   N_o = 20;
 
   double k_cl_gain, k_cl_arm_gain, k_cl_mass;
-  k_cl_mass = 0.12;
-  k_cl_gain = 0.1;
+  k_cl_mass = 0.012;
+  k_cl_gain = 0.01;
   k_cl_arm_gain = 0.05;
   k_cl = Eigen::Matrix<double, 13, 13>::Identity() * k_cl_gain;
   k_cl(0, 0) = k_cl_mass;
@@ -218,16 +218,17 @@ void payload_ft_sensor_cb(const geometry_msgs::WrenchStamped::ConstPtr &msg){
   geometry_msgs::WrenchStamped payload_ft;
   payload_ft = *msg;
   float lpf_gain = 0.4;
-  static double gravity_bias = payload_ft.wrench.force.z;
+  static double fz_last;
   true_f_b << payload_ft.wrench.force.x * lpf_gain + true_f_b(0) * (1.0-lpf_gain),
               payload_ft.wrench.force.y * lpf_gain + true_f_b(1) * (1.0-lpf_gain),
-              payload_ft.wrench.force.z * lpf_gain + true_f_b(2) * (1.0-lpf_gain);
+              payload_ft.wrench.force.z * 0.5 + fz_last * 0.5;
 
   true_m_b << payload_ft.wrench.torque.x * lpf_gain + true_m_b(0) * (1.0-lpf_gain),
               payload_ft.wrench.torque.y * lpf_gain + true_m_b(1) * (1.0-lpf_gain),
               payload_ft.wrench.torque.z * lpf_gain + true_m_b(2) * (1.0-lpf_gain);
   true_tau.block<3, 1>(0, 0) = R * true_f_b;
   true_tau.block<3, 1>(3, 0) = R * true_m_b;
+  fz_last = payload_ft.wrench.force.z;
 }
 
 geometry_msgs::Inertia inertia_sum;
@@ -488,7 +489,7 @@ int main(int argc, char **argv)
     }else{
       robot_cmd.force.x = wrench(0);
       robot_cmd.force.y = wrench(1);
-      robot_cmd.force.z = wrench(2);
+      robot_cmd.force.z = 0;
       // robot_cmd.force.z = 0.8 * 8.0 / 3.0 * g;
       // robot_cmd.force.z = 0.65 * true_tau(2);
       robot_cmd.torque.x = wrench(3);
@@ -504,12 +505,13 @@ int main(int argc, char **argv)
     // std::cout << "Iyy: " << o_i_hat(7) << std::endl << std::endl;
     // std::cout << "Izz: " << o_i_hat(9) << std::endl << std::endl;
     // std::cout << "-k_cl * gamma_o * ICL_sum: " << -k_cl * gamma_o * ICL_sum << std::endl << std::endl;
-    // std::cout << "wrench: " << wrench << std::endl << std::endl;
+    std::cout << "wrench: " << wrench << std::endl << std::endl;
     // std::cout << "ICL: " << ICL_sum << std::endl << std::endl;
     // std::cout << "r_px: " << o_i_hat(1) / o_i_hat(0) << std::endl << std::endl;
     // std::cout << "r_py: " << o_i_hat(2) / o_i_hat(0) << std::endl << std::endl;
     // std::cout << "r_pz: " << o_i_hat(3) / o_i_hat(0) << std::endl << std::endl;
     // std::cout << "Y_o * o_i_hat: " << Y_o * o_i_hat << std::endl << std::endl;
+    std::cout << "o_i_hat: " << o_i_hat << std::endl << std::endl;
     // std::cout << "Y_o: " << Y_o << std::endl << std::endl;
     // std::cout << "hat_map(pre_f_i) * R: " << hat_map(pre_f_i) * R << std::endl << std::endl;
     std::cout << "true_f_b(2): " << true_f_b(2) << std::endl << std::endl;

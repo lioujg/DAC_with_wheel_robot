@@ -7,7 +7,7 @@
       <visual name="visual">
          <geometry>
           <mesh>
-            <uri>model://uneven/meshes/uneven.dae</uri>
+            <uri>model://uneven/meshes/uneven2.dae</uri>
           </mesh>
 	       </geometry>
       </visual>
